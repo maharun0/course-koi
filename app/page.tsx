@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import Image from 'next/image';
+import Image from "next/image";
 
+// Updated CourseRow interface to match new CSV format
 interface CourseRow {
-  id: string;
-  course: string;
+  id: string; // Generated from Course Code + Section
+  courseCode: string; // Previously 'course'
+  credit: number; // New field
   section: string;
-  faculty: string;
-  dayTime: string;
+  facultyCode: string; // Previously 'faculty'
+  time: string; // Previously 'dayTime'
   room: string;
-  seats: number;
+  capacity: number; // New field
+  seat: number; // Previously 'seats'
 }
 
 type SortKey = keyof CourseRow | "index";
@@ -22,30 +25,33 @@ export default function CourseFilterPage() {
     key: "index",
     dir: "asc",
   });
-  const [savedCourses, setSavedCourses] = useState<CourseRow[]>([]); // Store full course info
+  const [savedCourses, setSavedCourses] = useState<CourseRow[]>([]);
   const [inputCourse, setInputCourse] = useState("");
   const [showDialog, setShowDialog] = useState<string | null>(null);
-  const [activeCourse, setActiveCourse] = useState<string | null>(null); // Active course for filtering
+  const [activeCourse, setActiveCourse] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
 
-  // Fetch CSV once
+  // Fetch and parse new CSV format
   useEffect(() => {
-    fetch("/courses.csv")
+    fetch("/courses_pdf.csv")
       .then((r) => r.text())
       .then((txt) => {
         const parsed: CourseRow[] = txt
           .trim()
           .split(/\r?\n/)
+          .slice(1) // Skip header row
           .filter(Boolean)
           .map((ln) => ln.split(",").map((c) => c.trim()))
           .map((c) => ({
-            id: c[0].replace(/\.$/, ""),
-            course: c[1],
+            id: `${c[0]}-${c[2]}`, // Generate id from Course Code + Section
+            courseCode: c[0],
+            credit: Number(c[1]),
             section: c[2],
-            faculty: c[3],
-            dayTime: c[4],
+            facultyCode: c[3],
+            time: c[4],
             room: c[5],
-            seats: Number(c[6]),
+            capacity: Number(c[6]),
+            seat: Number(c[7]),
           }));
         setRows(parsed);
       });
@@ -64,19 +70,19 @@ export default function CourseFilterPage() {
 
   // Derived data
   const courseOptions = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.course))).sort(),
+    () => Array.from(new Set(rows.map((r) => r.courseCode))).sort(),
     [rows]
   );
 
   const filtered = useMemo(() => {
     let base = rows;
-    if (activeCourse) base = base.filter((r) => r.course === activeCourse);
+    if (activeCourse) base = base.filter((r) => r.courseCode === activeCourse);
     if (!query) return base;
     const q = query.toLowerCase();
     return base.filter(
       (r) =>
-        r.course.toLowerCase().includes(q) ||
-        r.faculty.toLowerCase().includes(q) ||
+        r.courseCode.toLowerCase().includes(q) ||
+        r.facultyCode.toLowerCase().includes(q) ||
         r.room.toLowerCase().includes(q)
     );
   }, [rows, query, activeCourse]);
@@ -119,19 +125,19 @@ export default function CourseFilterPage() {
   const addCourse = () => {
     const upperCaseCourse = inputCourse.toUpperCase().trim();
     const courseToAdd = rows.find(
-      (r) => r.course.toUpperCase() === upperCaseCourse
+      (r) => r.courseCode.toUpperCase() === upperCaseCourse
     );
     if (
       courseToAdd &&
-      !savedCourses.some((saved) => saved.course === courseToAdd.course)
+      !savedCourses.some((saved) => saved.courseCode === courseToAdd.courseCode)
     ) {
       setSavedCourses([...savedCourses, courseToAdd]);
-      setInputCourse(""); // Reset the input box
+      setInputCourse("");
       setShowDialog("added");
-      setTimeout(() => setShowDialog(null), 3000); // Hide dialog after 3 seconds
+      setTimeout(() => setShowDialog(null), 3000);
     } else {
       setShowDialog("error");
-      setTimeout(() => setShowDialog(null), 3000); // Hide alert after 3 seconds
+      setTimeout(() => setShowDialog(null), 3000);
     }
   };
 
@@ -144,15 +150,15 @@ export default function CourseFilterPage() {
   const handleSelectCourse = (course: string) => {
     if (course === "All Courses") {
       setActiveCourse(null);
-      setInputCourse(""); // Clear the search query when selecting "All Courses"
+      setInputCourse("");
     } else {
       setActiveCourse(course);
-      setQuery(""); // Clear the search query when selecting a specific course
+      setQuery("");
     }
   };
 
   const handleRemoveCourse = (course: string) => {
-    setSavedCourses(savedCourses.filter((c) => c.course !== course));
+    setSavedCourses(savedCourses.filter((c) => c.courseCode !== course));
   };
 
   const handleDragStart = (course: string) => {
@@ -160,14 +166,14 @@ export default function CourseFilterPage() {
   };
 
   const handleDrop = (course: string) => {
-    const newOrder = savedCourses.filter((c) => c.course !== dragging);
-    const index = newOrder.findIndex((c) => c.course === course);
+    const newOrder = savedCourses.filter((c) => c.courseCode !== dragging);
+    const index = newOrder.findIndex((c) => c.courseCode === course);
     if (index === -1) return;
     if (dragging) {
       newOrder.splice(
         index,
         0,
-        savedCourses.find((c) => c.course === dragging)!
+        savedCourses.find((c) => c.courseCode === dragging)!
       );
     }
     setSavedCourses(newOrder);
@@ -177,11 +183,10 @@ export default function CourseFilterPage() {
   // Render
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
-      {/* ---------- Sidebar ---------- */}
+      {/* Sidebar */}
       <aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 m-4 p-4 space-y-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur rounded-lg shadow-lg">
         <h2 className="text-xl font-semibold">Saved Courses</h2>
 
-        {/* List */}
         <div className="space-y-2">
           <button
             onClick={() => handleSelectCourse("All Courses")}
@@ -198,22 +203,22 @@ export default function CourseFilterPage() {
           )}
           {savedCourses.map((c) => (
             <button
-              key={c.course}
-              onClick={() => handleSelectCourse(c.course)}
-              onDragStart={() => handleDragStart(c.course)}
-              onDrop={() => handleDrop(c.course)}
+              key={c.courseCode}
+              onClick={() => handleSelectCourse(c.courseCode)}
+              onDragStart={() => handleDragStart(c.courseCode)}
+              onDrop={() => handleDrop(c.courseCode)}
               draggable
               className={`w-full text-left px-3 py-2 rounded hover:bg-indigo-500/20 ${
-                activeCourse === c.course
+                activeCourse === c.courseCode
                   ? "bg-indigo-500 text-white"
                   : "bg-gray-200 dark:bg-gray-700"
               } flex justify-between items-center`}
             >
-              {c.course}
+              {c.courseCode}
               <span
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleRemoveCourse(c.course);
+                  handleRemoveCourse(c.courseCode);
                 }}
                 className="text-sm text-red-500 cursor-pointer"
               >
@@ -223,7 +228,6 @@ export default function CourseFilterPage() {
           ))}
         </div>
 
-        {/* Add Course (Input Box) */}
         <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
           <h3 className="text-sm font-medium">Add Course</h3>
           <input
@@ -253,14 +257,14 @@ export default function CourseFilterPage() {
             onClick={addCourse}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded disabled:opacity-50"
             disabled={
-              !inputCourse || savedCourses.some((c) => c.course === inputCourse)
+              !inputCourse ||
+              savedCourses.some((c) => c.courseCode === inputCourse)
             }
           >
             Add
           </button>
         </div>
 
-        {/* Dialog / Alert */}
         {showDialog === "added" && (
           <div className="fixed bottom-4 right-4 bg-green-500 text-white p-3 rounded-md shadow-lg">
             Course Added!
@@ -273,7 +277,7 @@ export default function CourseFilterPage() {
         )}
       </aside>
 
-      {/* ---------- Main Content ---------- */}
+      {/* Main Content */}
       <main className="flex-1 p-6 space-y-6">
         <div className="flex items-center justify-center">
           <Image
@@ -286,29 +290,29 @@ export default function CourseFilterPage() {
           <h1 className="text-5xl font-bold">Course Koi?</h1>
         </div>
 
-        {/* Centered and wider Search Bar */}
         <div className="flex justify-center mb-6">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by course code, faculty initial, or room number…"
+            placeholder="Search by course code, faculty code, or room number…"
             className="w-full max-w-lg border rounded p-2 bg-white dark:bg-gray-800 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40"
           />
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
           <table className="min-w-full shadow rounded bg-white dark:bg-gray-800">
             <thead className="bg-gray-200 dark:bg-gray-700">
               <tr>
                 {header("#", "index")}
-                {header("Course", "course")}
+                {header("Course", "courseCode")}
+                {header("Credit", "credit")} {/* New column */}
                 {header("Sec", "section")}
-                {header("Faculty", "faculty")}
-                {header("Day & Time", "dayTime")}
+                {header("Faculty", "facultyCode")}
+                {header("Time", "time")}
                 {header("Room", "room")}
-                {header("Seats", "seats")}
+                {header("Capacity", "capacity")} {/* New column */}
+                {header("Seats", "seat")}
               </tr>
             </thead>
             <tbody>
@@ -318,18 +322,20 @@ export default function CourseFilterPage() {
                   className="border-t border-gray-200 dark:border-gray-700"
                 >
                   <td className="px-4 py-2">{idx + 1}</td>
-                  <td className="px-4 py-2">{r.course}</td>
+                  <td className="px-4 py-2">{r.courseCode}</td>
+                  <td className="px-4 py-2">{r.credit}</td>
                   <td className="px-4 py-2">{r.section}</td>
-                  <td className="px-4 py-2">{r.faculty}</td>
-                  <td className="px-4 py-2 whitespace-nowrap">{r.dayTime}</td>
+                  <td className="px-4 py-2">{r.facultyCode}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">{r.time}</td>
                   <td className="px-4 py-2">{r.room}</td>
-                  <td className="px-4 py-2 text-center">{r.seats}</td>
+                  <td className="px-4 py-2 text-center">{r.capacity}</td>
+                  <td className="px-4 py-2 text-center">{r.seat}</td>
                 </tr>
               ))}
               {sorted.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={9} // Adjusted for new columns
                     className="p-4 text-center text-sm opacity-70"
                   >
                     No matching records.
