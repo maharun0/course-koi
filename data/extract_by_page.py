@@ -145,7 +145,7 @@ def extract_pdf_to_text_per_page(pdf_path, output_folder):
                     print(f"Page {page_num} has no extractable text")
         
         # Merge all CSV files into a single big CSV
-        header = ["Course Code", "Credit", "Section", "Faculty Code", "Time", "Room", "Capacity", "Seat"]
+        header = ["Course Code", "Credit", "Section", "Faculty Code", "Time", "Room", "Seat"]
         output_big_csv = os.path.join(output_folder, "combined_courses.csv")
         merge_csv_files(csv_files, output_big_csv, header)
         
