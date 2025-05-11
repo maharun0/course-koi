@@ -1,0 +1,227 @@
+'use client';
+
+import { useEffect, useState, useMemo } from 'react';
+
+interface CourseRow {
+  id: string;
+  course: string;
+  section: string;
+  faculty: string;
+  dayTime: string;
+  room: string;
+  seats: number;
+}
+
+type SortKey = keyof CourseRow | 'index';
+
+export default function CourseFilterPage() {
+  const [rows, setRows] = useState<CourseRow[]>([]);
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'index', dir: 'asc' });
+  const [savedCourses, setSavedCourses] = useState<string[]>([]);
+  const [inputCourse, setInputCourse] = useState('');
+
+  // Fetch CSV once
+  useEffect(() => {
+    fetch('/courses.csv')
+      .then((r) => r.text())
+      .then((txt) => {
+        const parsed: CourseRow[] = txt
+          .trim()
+          .split(/\r?\n/)
+          .filter(Boolean)
+          .map((ln) => ln.split(',').map((c) => c.trim()))
+          .map((c) => ({
+            id: c[0].replace(/\.$/, ''),
+            course: c[1],
+            section: c[2],
+            faculty: c[3],
+            dayTime: c[4],
+            room: c[5],
+            seats: Number(c[6]),
+          }));
+        setRows(parsed);
+      });
+  }, []);
+
+  // localStorage (savedCourses)
+  useEffect(() => {
+    const stored = JSON.parse(localStorage.getItem('savedCourses') ?? '[]');
+    setSavedCourses(Array.isArray(stored) ? stored : []);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('savedCourses', JSON.stringify(savedCourses));
+  }, [savedCourses]);
+
+  // Derived data
+  const courseOptions = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.course))).sort(),
+    [rows]
+  );
+
+  const filtered = useMemo(() => {
+    let base = rows;
+    if (savedCourses.length > 0) base = base.filter((r) => savedCourses.includes(r.course));
+    if (!query) return base;
+    const q = query.toLowerCase();
+    return base.filter(
+      (r) =>
+        r.course.toLowerCase().includes(q) ||
+        r.faculty.toLowerCase().includes(q) ||
+        r.room.toLowerCase().includes(q)
+    );
+  }, [rows, savedCourses, query]);
+
+  const sorted = useMemo(() => {
+    if (sort.key === 'index') return filtered;
+    const k = sort.key as keyof CourseRow;
+    return [...filtered].sort((a, b) => {
+      let v1: string | number = a[k];
+      let v2: string | number = b[k];
+      if (typeof v1 === 'string') v1 = v1.toLowerCase();
+      if (typeof v2 === 'string') v2 = v2.toLowerCase();
+      if (v1 < v2) return sort.dir === 'asc' ? -1 : 1;
+      if (v1 > v2) return sort.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filtered, sort]);
+
+  // UI helpers
+  const toggleSort = (key: SortKey) => {
+    setSort((prev) => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
+  };
+
+  const header = (label: string, key: SortKey) => (
+    <th
+      key={label}
+      onClick={() => toggleSort(key)}
+      className="px-4 py-2 text-left text-sm font-semibold cursor-pointer select-none hover:underline"
+    >
+      {label}
+      {sort.key === key && (sort.dir === 'asc' ? ' ↑' : ' ↓')}
+    </th>
+  );
+
+  // Sidebar logic
+  const addCourse = () => {
+    if (inputCourse && !savedCourses.includes(inputCourse)) {
+      setSavedCourses([...savedCourses, inputCourse]);
+      setInputCourse(''); // Reset the input box
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && inputCourse && !savedCourses.includes(inputCourse)) {
+      addCourse();
+    }
+  };
+
+  // Render
+  return (
+    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
+      {/* Sidebar */}
+      <aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 p-4 space-y-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur">
+        <h2 className="text-xl font-semibold">Saved Courses</h2>
+
+        {/* List */}
+        <div className="space-y-2">
+          {savedCourses.length === 0 && <p className="text-sm opacity-70">No courses added.</p>}
+          {savedCourses.map((c) => (
+            <button
+              key={c}
+              onClick={() => toggleSort(c)}
+              className={`w-full text-left px-3 py-2 rounded hover:bg-indigo-500/20 ${savedCourses.includes(c) ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700'}`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
+        {/* Add Course (Input Box) */}
+        <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-medium">Add Course</h3>
+          <input
+            type="text"
+            value={inputCourse}
+            onChange={(e) => setInputCourse(e.target.value)}
+            onKeyDown={handleKeyPress}
+            placeholder="Search & add course"
+            className="w-full border rounded p-2 bg-white dark:bg-gray-800 dark:border-gray-700"
+          />
+          <ul className="space-y-2 max-h-40 overflow-y-auto">
+            {courseOptions
+              .filter((course) => course.toLowerCase().includes(inputCourse.toLowerCase()))
+              .map((course) => (
+                <li
+                  key={course}
+                  onClick={() => setInputCourse(course)}
+                  className="cursor-pointer hover:bg-indigo-500/20 px-3 py-2"
+                >
+                  {course}
+                </li>
+              ))}
+          </ul>
+          <button
+            onClick={addCourse}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded disabled:opacity-50"
+            disabled={!inputCourse || savedCourses.includes(inputCourse)}
+          >
+            Add
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 p-6 space-y-6">
+        <h1 className="text-3xl font-bold">Course Schedule</h1>
+
+        {/* Search */}
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by course code, faculty initial, or room number…"
+          className="w-full max-w-sm border rounded p-2 bg-white dark:bg-gray-800 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40"
+        />
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="min-w-full shadow rounded bg-white dark:bg-gray-800">
+            <thead className="bg-gray-200 dark:bg-gray-700">
+              <tr>
+                {header('#', 'index')}
+                {header('Course', 'course')}
+                {header('Sec', 'section')}
+                {header('Faculty', 'faculty')}
+                {header('Day & Time', 'dayTime')}
+                {header('Room', 'room')}
+                {header('Seats', 'seats')}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((r, idx) => (
+                <tr key={r.id} className="border-t border-gray-200 dark:border-gray-700">
+                  <td className="px-4 py-2">{idx + 1}</td>
+                  <td className="px-4 py-2">{r.course}</td>
+                  <td className="px-4 py-2">{r.section}</td>
+                  <td className="px-4 py-2">{r.faculty}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">{r.dayTime}</td>
+                  <td className="px-4 py-2">{r.room}</td>
+                  <td className="px-4 py-2 text-center">{r.seats}</td>
+                </tr>
+              ))}
+              {sorted.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-4 text-center text-sm opacity-70">
+                    No matching records.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  );
+}
