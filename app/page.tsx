@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Image from 'next/image';
 
 interface CourseRow {
   id: string;
@@ -177,7 +178,7 @@ export default function CourseFilterPage() {
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
       {/* ---------- Sidebar ---------- */}
-      <aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 m-4 p-4 space-y-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur rounded-lg shadow-lg">
+      <aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 m-4 space-y-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur rounded-lg shadow-lg">
         <h2 className="text-xl font-semibold">Saved Courses</h2>
 
         {/* List */}
@@ -274,7 +275,16 @@ export default function CourseFilterPage() {
 
       {/* ---------- Main Content ---------- */}
       <main className="flex-1 p-6 space-y-6">
-        <h1 className="flex justify-center text-5xl font-bold">Course Koi?</h1>
+        <div className="flex items-center justify-center">
+          <Image
+            src="/course_koi.png"
+            alt="Course Koi"
+            width={64}
+            height={64}
+            className="rounded-full mr-4"
+          />
+          <h1 className="text-5xl font-bold">Course Koi?</h1>
+        </div>
 
         {/* Centered and wider Search Bar */}
         <div className="flex justify-center mb-6">
