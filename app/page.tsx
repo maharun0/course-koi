@@ -177,7 +177,7 @@ export default function CourseFilterPage() {
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
       {/* ---------- Sidebar ---------- */}
-      <aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 p-4 space-y-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur">
+      <aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 m-4 p-4 space-y-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur rounded-lg shadow-lg">
         <h2 className="text-xl font-semibold">Saved Courses</h2>
 
         {/* List */}
