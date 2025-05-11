@@ -274,7 +274,7 @@ export default function CourseFilterPage() {
 
       {/* ---------- Main Content ---------- */}
       <main className="flex-1 p-6 space-y-6">
-        <h1 className="flex justify-center text-5xl font-bold">Fake RDS</h1>
+        <h1 className="flex justify-center text-5xl font-bold">Course Koi?</h1>
 
         {/* Centered and wider Search Bar */}
         <div className="flex justify-center mb-6">

@@ -8,8 +8,8 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Fake RDS",
-  description: "a fake rds",
+  title: "Course Koi?",
+  description: "An easy way to find courses.",
   icons: {
     icon: "/favicon.ico",
     // apple: "/apple-touch-icon.png", // For Apple devices
