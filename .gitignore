@@ -41,4 +41,4 @@ yarn-error.log*
 next-env.d.ts
 
 # extra csv files
-./data/pdf_output/*csv
+./data/pdf_output/.*csv
