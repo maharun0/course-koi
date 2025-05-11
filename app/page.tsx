@@ -7,12 +7,11 @@ import Image from "next/image";
 interface CourseRow {
   id: string; // Generated from Course Code + Section
   courseCode: string; // Previously 'course'
-  credit: number; // New field
+  // credit: number; // New field
   section: string;
   facultyCode: string; // Previously 'faculty'
   time: string; // Previously 'dayTime'
   room: string;
-  capacity: number; // New field
   seat: number; // Previously 'seats'
 }
 
@@ -45,12 +44,11 @@ export default function CourseFilterPage() {
           .map((c) => ({
             id: `${c[0]}-${c[2]}`, // Generate id from Course Code + Section
             courseCode: c[0],
-            credit: Number(c[1]),
+            // credit: Number(c[1]),
             section: c[2],
             facultyCode: c[3],
             time: c[4],
             room: c[5],
-            capacity: Number(c[6]),
             seat: Number(c[7]),
           }));
         setRows(parsed);
@@ -306,12 +304,11 @@ export default function CourseFilterPage() {
               <tr>
                 {header("#", "index")}
                 {header("Course", "courseCode")}
-                {header("Credit", "credit")} {/* New column */}
+                {/* {header("Credit", "credit")} New column */}
                 {header("Sec", "section")}
                 {header("Faculty", "facultyCode")}
                 {header("Time", "time")}
                 {header("Room", "room")}
-                {header("Capacity", "capacity")} {/* New column */}
                 {header("Seats", "seat")}
               </tr>
             </thead>
@@ -323,12 +320,11 @@ export default function CourseFilterPage() {
                 >
                   <td className="px-4 py-2">{idx + 1}</td>
                   <td className="px-4 py-2">{r.courseCode}</td>
-                  <td className="px-4 py-2">{r.credit}</td>
+                  {/* <td className="px-4 py-2">{r.credit}</td> */}
                   <td className="px-4 py-2">{r.section}</td>
                   <td className="px-4 py-2">{r.facultyCode}</td>
                   <td className="px-4 py-2 whitespace-nowrap">{r.time}</td>
                   <td className="px-4 py-2">{r.room}</td>
-                  <td className="px-4 py-2 text-center">{r.capacity}</td>
                   <td className="px-4 py-2 text-center">{r.seat}</td>
                 </tr>
               ))}
