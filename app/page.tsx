@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
+// import { FaSun as Sun, FaMoon as Moon } from "react-icons/fa"; // Using FontAwesome icons
 
 // Updated CourseRow interface to match new CSV format
 interface CourseRow {
   id: string; // Generated from Course Code + Section
   courseCode: string; // Previously 'course'
-  // credit: number; // New field
   section: string;
   facultyCode: string; // Previously 'faculty'
   time: string; // Previously 'dayTime'
@@ -29,6 +29,7 @@ export default function CourseFilterPage() {
   const [showDialog, setShowDialog] = useState<string | null>(null);
   const [activeCourse, setActiveCourse] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
+  // const [isDarkMode, setIsDarkMode] = useState(false); // State to toggle dark mode
 
   // Fetch and parse new CSV format
   useEffect(() => {
@@ -44,7 +45,6 @@ export default function CourseFilterPage() {
           .map((c) => ({
             id: `${c[0]}-${c[2]}`, // Generate id from Course Code + Section
             courseCode: c[0],
-            // credit: Number(c[1]),
             section: c[2],
             facultyCode: c[3],
             time: c[4],
@@ -108,11 +108,15 @@ export default function CourseFilterPage() {
     );
   };
 
+  // const toggleDarkMode = () => {
+  //   setIsDarkMode(!isDarkMode);
+  // };
+
   const header = (label: string, key: SortKey) => (
     <th
       key={label}
       onClick={() => toggleSort(key)}
-      className="px-4 py-2 text-left text-sm font-semibold cursor-pointer select-none hover:underline"
+      className="px-4 py-2 text-left text-sm font-semibold cursor-pointer select-none hover:underline text-inherit"
     >
       {label}
       {sort.key === key && (sort.dir === "asc" ? " ↑" : " ↓")}
@@ -178,26 +182,25 @@ export default function CourseFilterPage() {
     setDragging(null);
   };
 
-  // Render
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
+    <div className={`flex min-h-screen transition-colors`}>
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 m-4 p-4 space-y-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur rounded-lg shadow-lg">
+      <aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 m-4 p-4 space-y-6 bg-gray-800/80 backdrop-blur rounded-lg shadow-lg">
         <h2 className="text-xl font-semibold">Saved Courses</h2>
 
         <div className="space-y-2">
           <button
             onClick={() => handleSelectCourse("All Courses")}
             className={`w-full text-left px-3 py-2 rounded hover:bg-indigo-500/20 ${
-              !activeCourse
-                ? "bg-indigo-500 text-white"
-                : "bg-gray-200 dark:bg-gray-700"
+              !activeCourse ? "bg-indigo-500 text-white" : ""
             }`}
           >
             All Courses
           </button>
           {savedCourses.length === 0 && (
-            <p className="text-sm opacity-70">No courses added.</p>
+            <p className="text-sm opacity-70 text-gray-400">
+              No courses added.
+            </p>
           )}
           {savedCourses.map((c) => (
             <button
@@ -207,9 +210,7 @@ export default function CourseFilterPage() {
               onDrop={() => handleDrop(c.courseCode)}
               draggable
               className={`w-full text-left px-3 py-2 rounded hover:bg-indigo-500/20 ${
-                activeCourse === c.courseCode
-                  ? "bg-indigo-500 text-white"
-                  : "bg-gray-200 dark:bg-gray-700"
+                activeCourse === c.courseCode ? "bg-indigo-500 text-white" : ""
               } flex justify-between items-center`}
             >
               {c.courseCode}
@@ -234,7 +235,7 @@ export default function CourseFilterPage() {
             onChange={(e) => setInputCourse(e.target.value)}
             onKeyDown={handleKeyPress}
             placeholder="Search & add course"
-            className="w-full border rounded p-2 bg-white dark:bg-gray-800 dark:border-gray-700"
+            className="w-full border rounded p-2 bg-gray-900 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40"
           />
           <ul className="space-y-2 max-h-60 overflow-y-auto">
             {courseOptions
@@ -285,7 +286,7 @@ export default function CourseFilterPage() {
             height={64}
             className="rounded-full mr-4"
           />
-          <h1 className="text-5xl font-bold">Course Koi?</h1>
+          <h1 className="text-5xl font-bold text-yellow-500">Course Koi?</h1>
         </div>
 
         <div className="flex justify-center mb-6">
@@ -294,7 +295,7 @@ export default function CourseFilterPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by course code, faculty code, or room number…"
-            className="w-full max-w-lg border rounded p-2 bg-white dark:bg-gray-800 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40"
+            className="w-full max-w-lg border rounded p-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40"
           />
         </div>
 
@@ -304,7 +305,6 @@ export default function CourseFilterPage() {
               <tr>
                 {header("#", "index")}
                 {header("Course", "courseCode")}
-                {/* {header("Credit", "credit")} New column */}
                 {header("Sec", "section")}
                 {header("Faculty", "facultyCode")}
                 {header("Time", "time")}
@@ -314,13 +314,9 @@ export default function CourseFilterPage() {
             </thead>
             <tbody>
               {sorted.map((r, idx) => (
-                <tr
-                  key={r.id}
-                  className="border-t border-gray-200 dark:border-gray-700"
-                >
+                <tr key={r.id} className="border-t border-gray-200 dark:border-gray-700">
                   <td className="px-4 py-2">{idx + 1}</td>
                   <td className="px-4 py-2">{r.courseCode}</td>
-                  {/* <td className="px-4 py-2">{r.credit}</td> */}
                   <td className="px-4 py-2">{r.section}</td>
                   <td className="px-4 py-2">{r.facultyCode}</td>
                   <td className="px-4 py-2 whitespace-nowrap">{r.time}</td>
@@ -330,10 +326,7 @@ export default function CourseFilterPage() {
               ))}
               {sorted.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={9} // Adjusted for new columns
-                    className="p-4 text-center text-sm opacity-70"
-                  >
+                  <td colSpan={7} className="p-4 text-center text-gray-400 dark:text-gray-500">
                     No matching records.
                   </td>
                 </tr>
@@ -342,6 +335,14 @@ export default function CourseFilterPage() {
           </table>
         </div>
       </main>
+
+      {/* Dark Mode Toggle Button */}
+      {/* <button
+        onClick={toggleDarkMode}
+        className="fixed top-5 right-5 p-3 rounded-full bg-gray-900 dark:bg-gray-700 text-white shadow-lg transition-colors"
+      >
+        {isDarkMode ? <Moon size={24} /> : <Sun size={24} />}
+      </button> */}
     </div>
   );
 }
