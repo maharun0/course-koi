@@ -22,6 +22,7 @@ type SortKey = keyof CourseRow | "index";
 export default function CourseFilterPage() {
   const [rows, setRows] = useState<CourseRow[]>([]);
   const [query, setQuery] = useState("");
+  const [starredQuery, setStarredQuery] = useState("");
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
     key: "index",
     dir: "asc",
@@ -111,10 +112,21 @@ export default function CourseFilterPage() {
     });
   }, [filtered, sort]);
 
+  const starredFiltered = useMemo(() => {
+    if (!starredQuery) return starredCourses;
+    const q = starredQuery.toLowerCase();
+    return starredCourses.filter(
+      (r) =>
+        r.courseCode.toLowerCase().includes(q) ||
+        r.facultyCode.toLowerCase().includes(q) ||
+        r.room.toLowerCase().includes(q)
+    );
+  }, [starredCourses, starredQuery]);
+
   const starredSorted = useMemo(() => {
-    if (sort.key === "index") return starredCourses;
+    if (sort.key === "index") return starredFiltered;
     const k = sort.key as keyof CourseRow;
-    return [...starredCourses].sort((a, b) => {
+    return [...starredFiltered].sort((a, b) => {
       let v1: string | number = a[k];
       let v2: string | number = b[k];
       if (typeof v1 === "string") v1 = v1.toLowerCase();
@@ -123,7 +135,7 @@ export default function CourseFilterPage() {
       if (v1 > v2) return sort.dir === "asc" ? 1 : -1;
       return 0;
     });
-  }, [starredCourses, sort]);
+  }, [starredFiltered, sort]);
 
   // UI helpers
   const toggleSort = (key: SortKey) => {
@@ -189,17 +201,20 @@ export default function CourseFilterPage() {
     setDragging(course);
   };
 
+  const handleDragOver = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+  };
+
   const handleDrop = (course: string) => {
+    if (!dragging) return;
     const newOrder = savedCourses.filter((c) => c.courseCode !== dragging);
     const index = newOrder.findIndex((c) => c.courseCode === course);
     if (index === -1) return;
-    if (dragging) {
-      newOrder.splice(
-        index,
-        0,
-        savedCourses.find((c) => c.courseCode === dragging)!
-      );
-    }
+    newOrder.splice(
+      index,
+      0,
+      savedCourses.find((c) => c.courseCode === dragging)!
+    );
     setSavedCourses(newOrder);
     setDragging(null);
   };
@@ -245,6 +260,7 @@ export default function CourseFilterPage() {
                 handleSelectCourse(c.courseCode);
               }}
               onDragStart={() => handleDragStart(c.courseCode)}
+              onDragOver={handleDragOver}
               onDrop={() => handleDrop(c.courseCode)}
               draggable
               className={`w-full text-left px-3 py-2 rounded hover:bg-indigo-500/20 ${
@@ -339,12 +355,12 @@ export default function CourseFilterPage() {
           <h1 className="text-5xl font-bold text-yellow-500">Course Koi?</h1>
         </div>
 
-        {view === "all" && (
+        {(view === "all" || view === "starred") && (
           <div className="flex justify-center mb-6">
             <input
               type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              value={view === "all" ? query : starredQuery}
+              onChange={(e) => (view === "all" ? setQuery(e.target.value) : setStarredQuery(e.target.value))}
               placeholder="Search by course code, faculty code, or room number…"
               className="w-full max-w-lg border rounded p-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40"
             />
