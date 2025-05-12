@@ -126,9 +126,10 @@ export default function CourseFilterPage() {
 				let v1: string | number | boolean | undefined = a[k];
 				let v2: string | number | boolean | undefined = b[k];
 
-				// Handle undefined priority values
+				// Handle undefined priority values by treating them as 0
 				if (k === 'priority') {
-					v1 = v1 ?? 0; // Default to 0 if undefined					v2 = v2 ?? 0; // Default to 0 if undefined
+					v1 = (v1 === undefined) ? 0 : v1;
+					v2 = (v2 === undefined) ? 0 : v2;
 				}
 
 				// Special handling for the starred property - boolean comparison
@@ -487,7 +488,7 @@ export default function CourseFilterPage() {
 						<input type="text" value={view === 'all' ? query : starredQuery} onChange={(e) => (view === 'all' ? setQuery(e.target.value) : setStarredQuery(e.target.value))} placeholder="Search by course code, faculty code, or room number…" className="w-full max-w-lg border rounded p-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40" />{' '}
 					</div>
 				)}{' '}
-				{view === 'all' && savedCourses.length > 0 && (
+				{view === 'all' && savedCourses.length > 0 && !activeCourse && (
 					<div className="mb-4">
 						<div className="flex flex-wrap gap-2 justify-center">
 							{Array.from(new Set(savedCourses.map((c) => c.courseCode)))
