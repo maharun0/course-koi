@@ -2,17 +2,19 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
-// import { FaSun as Sun, FaMoon as Moon } from "react-icons/fa"; // Using FontAwesome icons
+import { FaStar } from "react-icons/fa";
 
 // Updated CourseRow interface to match new CSV format
 interface CourseRow {
   id: string; // Generated from Course Code + Section
-  courseCode: string; // Previously 'course'
+  courseCode: string;
+  credit: number;
   section: string;
-  facultyCode: string; // Previously 'faculty'
-  time: string; // Previously 'dayTime'
+  facultyCode: string;
+  days: string;
+  time: string; // Combination of Days and Time
   room: string;
-  seat: number; // Previously 'seats'
+  seat: number;
 }
 
 type SortKey = keyof CourseRow | "index";
@@ -25,11 +27,12 @@ export default function CourseFilterPage() {
     dir: "asc",
   });
   const [savedCourses, setSavedCourses] = useState<CourseRow[]>([]);
+  const [starredCourses, setStarredCourses] = useState<CourseRow[]>([]);
   const [inputCourse, setInputCourse] = useState("");
   const [showDialog, setShowDialog] = useState<string | null>(null);
   const [activeCourse, setActiveCourse] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
-  // const [isDarkMode, setIsDarkMode] = useState(false); // State to toggle dark mode
+  const [view, setView] = useState<"all" | "starred">("all");
 
   // Fetch and parse new CSV format
   useEffect(() => {
@@ -45,26 +48,35 @@ export default function CourseFilterPage() {
           .map((c) => ({
             id: `${c[0]}-${c[2]}`, // Generate id from Course Code + Section
             courseCode: c[0],
+            credit: Number(c[1]),
             section: c[2],
             facultyCode: c[3],
-            time: c[4],
-            room: c[5],
+            days: c[4],
+            time: `${c[4]} ${c[5]}`, // Combine Days and Time
+            room: c[6],
             seat: Number(c[7]),
           }));
         setRows(parsed);
       });
   }, []);
 
-  // Load saved courses from localStorage
+  // Load saved and starred courses from localStorage
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("savedCourses") ?? "[]");
-    setSavedCourses(Array.isArray(stored) ? stored : []);
+    const storedSaved = JSON.parse(localStorage.getItem("savedCourses") ?? "[]");
+    setSavedCourses(Array.isArray(storedSaved) ? storedSaved : []);
+    const storedStarred = JSON.parse(localStorage.getItem("starredCourses") ?? "[]");
+    setStarredCourses(Array.isArray(storedStarred) ? storedStarred : []);
   }, []);
 
   // Save saved courses to localStorage
   useEffect(() => {
     localStorage.setItem("savedCourses", JSON.stringify(savedCourses));
   }, [savedCourses]);
+
+  // Save starred courses to localStorage
+  useEffect(() => {
+    localStorage.setItem("starredCourses", JSON.stringify(starredCourses));
+  }, [starredCourses]);
 
   // Derived data
   const courseOptions = useMemo(
@@ -99,6 +111,20 @@ export default function CourseFilterPage() {
     });
   }, [filtered, sort]);
 
+  const starredSorted = useMemo(() => {
+    if (sort.key === "index") return starredCourses;
+    const k = sort.key as keyof CourseRow;
+    return [...starredCourses].sort((a, b) => {
+      let v1: string | number = a[k];
+      let v2: string | number = b[k];
+      if (typeof v1 === "string") v1 = v1.toLowerCase();
+      if (typeof v2 === "string") v2 = v2.toLowerCase();
+      if (v1 < v2) return sort.dir === "asc" ? -1 : 1;
+      if (v1 > v2) return sort.dir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [starredCourses, sort]);
+
   // UI helpers
   const toggleSort = (key: SortKey) => {
     setSort((prev) =>
@@ -107,10 +133,6 @@ export default function CourseFilterPage() {
         : { key, dir: "asc" }
     );
   };
-
-  // const toggleDarkMode = () => {
-  //   setIsDarkMode(!isDarkMode);
-  // };
 
   const header = (label: string, key: SortKey) => (
     <th
@@ -182,35 +204,51 @@ export default function CourseFilterPage() {
     setDragging(null);
   };
 
+  // Toggle star for a course
+  const toggleStar = (course: CourseRow) => {
+    if (starredCourses.some((c) => c.id === course.id)) {
+      setStarredCourses(starredCourses.filter((c) => c.id !== course.id));
+    } else {
+      setStarredCourses([...starredCourses, course]);
+    }
+  };
+
   return (
     <div className={`flex min-h-screen transition-colors`}>
       {/* Sidebar */}
       <aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 m-4 p-4 space-y-6 bg-gray-800/80 backdrop-blur rounded-lg shadow-lg">
-        <h2 className="text-xl font-semibold">Saved Courses</h2>
+        <h2 className="text-xl font-semibold">Course Management</h2>
 
         <div className="space-y-2">
           <button
-            onClick={() => handleSelectCourse("All Courses")}
+            onClick={() => {
+              setView("all");
+              setActiveCourse(null);
+              setInputCourse("");
+            }}
             className={`w-full text-left px-3 py-2 rounded hover:bg-indigo-500/20 ${
-              !activeCourse ? "bg-indigo-500 text-white" : ""
+              view === "all" && !activeCourse ? "bg-indigo-500 text-white" : ""
             }`}
           >
             All Courses
           </button>
           {savedCourses.length === 0 && (
             <p className="text-sm opacity-70 text-gray-400">
-              No courses added.
+              No saved courses.
             </p>
           )}
           {savedCourses.map((c) => (
             <button
               key={c.courseCode}
-              onClick={() => handleSelectCourse(c.courseCode)}
+              onClick={() => {
+                setView("all");
+                handleSelectCourse(c.courseCode);
+              }}
               onDragStart={() => handleDragStart(c.courseCode)}
               onDrop={() => handleDrop(c.courseCode)}
               draggable
               className={`w-full text-left px-3 py-2 rounded hover:bg-indigo-500/20 ${
-                activeCourse === c.courseCode ? "bg-indigo-500 text-white" : ""
+                view === "all" && activeCourse === c.courseCode ? "bg-indigo-500 text-white" : ""
               } flex justify-between items-center`}
             >
               {c.courseCode}
@@ -225,6 +263,18 @@ export default function CourseFilterPage() {
               </span>
             </button>
           ))}
+        </div>
+
+        <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={() => setView("starred")}
+            className={`w-full text-left px-3 py-2 rounded hover:bg-indigo-500/20 ${
+              view === "starred" ? "bg-indigo-500 text-white" : ""
+            } flex items-center`}
+          >
+            <FaStar className="mr-2 text-yellow-400" />
+            Starred Courses
+          </button>
         </div>
 
         <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
@@ -289,15 +339,17 @@ export default function CourseFilterPage() {
           <h1 className="text-5xl font-bold text-yellow-500">Course Koi?</h1>
         </div>
 
-        <div className="flex justify-center mb-6">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by course code, faculty code, or room number…"
-            className="w-full max-w-lg border rounded p-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40"
-          />
-        </div>
+        {view === "all" && (
+          <div className="flex justify-center mb-6">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by course code, faculty code, or room number…"
+              className="w-full max-w-lg border rounded p-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40"
+            />
+          </div>
+        )}
 
         <div className="overflow-x-auto">
           <table className="min-w-full shadow rounded bg-white dark:bg-gray-800">
@@ -310,10 +362,11 @@ export default function CourseFilterPage() {
                 {header("Time", "time")}
                 {header("Room", "room")}
                 {header("Seats", "seat")}
+                <th className="px-4 py-2"></th> {/* Empty header for star */}
               </tr>
             </thead>
             <tbody>
-              {sorted.map((r, idx) => (
+              {(view === "all" ? sorted : starredSorted).map((r, idx) => (
                 <tr key={r.id} className="border-t border-gray-200 dark:border-gray-700">
                   <td className="px-4 py-2">{idx + 1}</td>
                   <td className="px-4 py-2">{r.courseCode}</td>
@@ -322,12 +375,22 @@ export default function CourseFilterPage() {
                   <td className="px-4 py-2 whitespace-nowrap">{r.time}</td>
                   <td className="px-4 py-2">{r.room}</td>
                   <td className="px-4 py-2 text-center">{r.seat}</td>
+                  <td className="px-4 py-2">
+                    <FaStar
+                      className={`cursor-pointer ${
+                        starredCourses.some((c) => c.id === r.id)
+                          ? "text-yellow-400"
+                          : "text-gray-400"
+                      }`}
+                      onClick={() => toggleStar(r)}
+                    />
+                  </td>
                 </tr>
               ))}
-              {sorted.length === 0 && (
+              {(view === "all" ? sorted : starredSorted).length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-4 text-center text-gray-400 dark:text-gray-500">
-                    No matching records.
+                  <td colSpan={8} className="p-4 text-center text-gray-400 dark:text-gray-500">
+                    {view === "all" ? "No matching records." : "No starred courses."}
                   </td>
                 </tr>
               )}
@@ -335,14 +398,6 @@ export default function CourseFilterPage() {
           </table>
         </div>
       </main>
-
-      {/* Dark Mode Toggle Button */}
-      {/* <button
-        onClick={toggleDarkMode}
-        className="fixed top-5 right-5 p-3 rounded-full bg-gray-900 dark:bg-gray-700 text-white shadow-lg transition-colors"
-      >
-        {isDarkMode ? <Moon size={24} /> : <Sun size={24} />}
-      </button> */}
     </div>
   );
 }
