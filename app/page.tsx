@@ -15,6 +15,7 @@ interface CourseRow {
 	time: string; // Combination of Days and Time
 	room: string;
 	seat: number;
+	priority?: number; // Optional priority value for sorting
 }
 
 type SortKey = keyof CourseRow | 'index';
@@ -38,6 +39,7 @@ export default function CourseFilterPage() {
 	const [activeCourse, setActiveCourse] = useState<string | null>(null);
 	const [dragging, setDragging] = useState<string | null>(null);
 	const [view, setView] = useState<'all' | 'starred'>('all');
+	const [coursePriorities, setCoursePriorities] = useState<Record<string, number>>({});
 
 	// Fetch and parse new CSV format
 	useEffect(() => {
@@ -64,35 +66,42 @@ export default function CourseFilterPage() {
 				setRows(parsed);
 			});
 	}, []);
-
 	// Load saved and starred courses from localStorage
 	useEffect(() => {
 		const storedSaved = JSON.parse(localStorage.getItem('savedCourses') ?? '[]');
 		setSavedCourses(Array.isArray(storedSaved) ? storedSaved : []);
 		const storedStarred = JSON.parse(localStorage.getItem('starredCourses') ?? '[]');
 		setStarredCourses(Array.isArray(storedStarred) ? storedStarred : []);
+		const storedPriorities = JSON.parse(localStorage.getItem('coursePriorities') ?? '{}');
+		setCoursePriorities(typeof storedPriorities === 'object' ? storedPriorities : {});
 	}, []);
 
 	// Save saved courses to localStorage
 	useEffect(() => {
 		localStorage.setItem('savedCourses', JSON.stringify(savedCourses));
 	}, [savedCourses]);
-
 	// Save starred courses to localStorage
 	useEffect(() => {
 		localStorage.setItem('starredCourses', JSON.stringify(starredCourses));
 	}, [starredCourses]);
 
+	// Save course priorities to localStorage
+	useEffect(() => {
+		localStorage.setItem('coursePriorities', JSON.stringify(coursePriorities));
+	}, [coursePriorities]);
+
 	// Derived data
 	const courseOptions = useMemo(() => Array.from(new Set(rows.map((r) => r.courseCode))).sort(), [rows]);
-
 	const filtered = useMemo(() => {
-		let base = rows;
+		let base = rows.map((row) => ({
+			...row,
+			priority: coursePriorities[row.id] ?? undefined,
+		}));
 		if (activeCourse) base = base.filter((r) => r.courseCode === activeCourse);
 		if (!query) return base;
 		const q = query.toLowerCase();
 		return base.filter((r) => r.courseCode.toLowerCase().includes(q) || r.facultyCode.toLowerCase().includes(q) || r.room.toLowerCase().includes(q));
-	}, [rows, query, activeCourse]);
+	}, [rows, query, activeCourse, coursePriorities]);
 	// Multi-column sorting function
 	const applyMultiSort = (items: CourseRow[], sortConfigs: SortConfig[]) => {
 		if (sortConfigs.length === 0) return items;
@@ -101,10 +110,17 @@ export default function CourseFilterPage() {
 			// Apply each sort config in order until a non-zero comparison is found
 			for (const sort of sortConfigs) {
 				if (sort.dir === 'none') continue;
-
 				const k = sort.key as keyof CourseRow;
-				let v1: string | number = a[k];
-				let v2: string | number = b[k];				// Special handling for section - convert to number for numeric sorting
+				let v1: string | number | undefined = a[k];
+				let v2: string | number | undefined = b[k];
+
+				// Handle undefined priority values
+				if (k === 'priority') {
+					v1 = v1 ?? 0; // Default to 0 if undefined
+					v2 = v2 ?? 0; // Default to 0 if undefined
+				}
+
+				// Special handling for section - convert to number for numeric sorting
 				if (k === 'section') {
 					const n1 = parseInt(v1 as string, 10);
 					const n2 = parseInt(v2 as string, 10);
@@ -114,18 +130,18 @@ export default function CourseFilterPage() {
 						continue;
 					}
 				}
-						// Special handling for time column - ensure days are sorted first (MW, RA, ST) and then by AM/PM
+				// Special handling for time column - ensure days are sorted first (MW, RA, ST) and then by AM/PM
 				if (k === 'time') {
 					const t1 = v1 as string;
 					const t2 = v2 as string;
-					
+
 					// Extract day patterns (assuming they appear at the start of the time string)
 					const dayPattern1 = t1.substring(0, 2);
 					const dayPattern2 = t2.substring(0, 2);
-					
+
 					// Define day pattern priority (MW, RA, ST, etc.)
-					const dayPriority: Record<string, number> = { 'MW': 1, 'RA': 2, 'ST': 3 };
-					
+					const dayPriority: Record<string, number> = { MW: 1, RA: 2, ST: 3 };
+
 					// Compare day patterns first
 					if (dayPattern1 !== dayPattern2) {
 						const priority1 = dayPriority[dayPattern1] || 999;
@@ -133,36 +149,38 @@ export default function CourseFilterPage() {
 						if (priority1 < priority2) return sort.dir === 'asc' ? -1 : 1;
 						if (priority1 > priority2) return sort.dir === 'asc' ? 1 : -1;
 					}
-					
+
 					// If same day pattern, check AM/PM
 					const isAM1 = t1.includes('AM');
 					const isAM2 = t2.includes('AM');
 					const isPM1 = t1.includes('PM');
 					const isPM2 = t2.includes('PM');
-					
+
 					// AM should come before PM for same day pattern
 					if (isAM1 && isPM2) return sort.dir === 'asc' ? -1 : 1;
 					if (isPM1 && isAM2) return sort.dir === 'asc' ? 1 : -1;
-					
+
 					// If both are AM or both are PM, try to extract and compare the hour
 					const hourMatch1 = t1.match(/(\d+)(?::(\d+))?\s*(AM|PM)/i);
 					const hourMatch2 = t2.match(/(\d+)(?::(\d+))?\s*(AM|PM)/i);
-					
+
 					if (hourMatch1 && hourMatch2) {
 						const hour1 = parseInt(hourMatch1[1], 10);
 						const hour2 = parseInt(hourMatch2[1], 10);
-						
+
 						if (hour1 < hour2) return sort.dir === 'asc' ? -1 : 1;
 						if (hour1 > hour2) return sort.dir === 'asc' ? 1 : -1;
 					}
-				}
-
-				// Normal string comparison for other fields
+				} // Normal string comparison for other fields
 				if (typeof v1 === 'string') v1 = v1.toLowerCase();
 				if (typeof v2 === 'string') v2 = v2.toLowerCase();
 
-				if (v1 < v2) return sort.dir === 'asc' ? -1 : 1;
-				if (v1 > v2) return sort.dir === 'asc' ? 1 : -1;
+				// At this point v1 and v2 are guaranteed to be defined
+				const value1 = v1 as string | number;
+				const value2 = v2 as string | number;
+
+				if (value1 < value2) return sort.dir === 'asc' ? -1 : 1;
+				if (value1 > value2) return sort.dir === 'asc' ? 1 : -1;
 			}
 			return 0;
 		});
@@ -171,12 +189,15 @@ export default function CourseFilterPage() {
 	const sorted = useMemo(() => {
 		return applyMultiSort(filtered, sorts);
 	}, [filtered, sorts]);
-
 	const starredFiltered = useMemo(() => {
-		if (!starredQuery) return starredCourses;
+		const base = starredCourses.map((row) => ({
+			...row,
+			priority: coursePriorities[row.id] ?? undefined,
+		}));
+		if (!starredQuery) return base;
 		const q = starredQuery.toLowerCase();
-		return starredCourses.filter((r) => r.courseCode.toLowerCase().includes(q) || r.facultyCode.toLowerCase().includes(q) || r.room.toLowerCase().includes(q));
-	}, [starredCourses, starredQuery]);
+		return base.filter((r) => r.courseCode.toLowerCase().includes(q) || r.facultyCode.toLowerCase().includes(q) || r.room.toLowerCase().includes(q));
+	}, [starredCourses, starredQuery, coursePriorities]);
 
 	const starredSorted = useMemo(() => {
 		return applyMultiSort(starredFiltered, sorts);
@@ -293,7 +314,6 @@ export default function CourseFilterPage() {
 		setSavedCourses(newOrder);
 		setDragging(null);
 	};
-
 	// Toggle star for a course
 	const toggleStar = (course: CourseRow) => {
 		if (starredCourses.some((c) => c.id === course.id)) {
@@ -301,6 +321,14 @@ export default function CourseFilterPage() {
 		} else {
 			setStarredCourses([...starredCourses, course]);
 		}
+	};
+
+	// Change priority for a course
+	const changePriority = (course: CourseRow, priority: number) => {
+		setCoursePriorities((prev) => ({
+			...prev,
+			[course.id]: priority,
+		}));
 	};
 
 	return (
@@ -381,14 +409,15 @@ export default function CourseFilterPage() {
 				<div className="flex items-center justify-center">
 					<Image src="/course_koi.png" alt="Course Koi" width={64} height={64} className="rounded-full mr-4" />
 					<h1 className="text-5xl font-bold text-yellow-500">Course Koi?</h1>
-				</div>
-
+				</div>{' '}
 				{(view === 'all' || view === 'starred') && (
 					<div className="flex justify-center mb-6">
-						<input type="text" value={view === 'all' ? query : starredQuery} onChange={(e) => (view === 'all' ? setQuery(e.target.value) : setStarredQuery(e.target.value))} placeholder="Search by course code, faculty code, or room number…" className="w-full max-w-lg border rounded p-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40" />
+						<input type="text" value={view === 'all' ? query : starredQuery} onChange={(e) => (view === 'all' ? setQuery(e.target.value) : setStarredQuery(e.target.value))} placeholder="Search by course code, faculty code, or room number…" className="w-full max-w-lg border rounded p-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40" />{' '}
 					</div>
 				)}
-
+				<div className="text-xs text-center text-gray-500 dark:text-gray-400 mb-3">
+					<p>Set priority values to rank sections. Click column headers to sort. Click again to toggle ascending/descending/turn off sorting.</p>
+				</div>
 				<div className="overflow-x-auto">
 					<table className="min-w-full shadow rounded bg-white dark:bg-gray-800">
 						<thead className="bg-gray-200 dark:bg-gray-700">
@@ -396,10 +425,10 @@ export default function CourseFilterPage() {
 								{header('#', 'index')}
 								{header('Course', 'courseCode')}
 								{header('Sec', 'section')}
-								{header('Faculty', 'facultyCode')}
-								{header('Time', 'time')}
+								{header('Faculty', 'facultyCode')} {header('Time', 'time')}
 								{header('Room', 'room')}
 								{header('Seats', 'seat')}
+								{header('Priority', 'priority')}
 								<th className="px-4 py-2"></th> {/* Empty header for star */}
 							</tr>
 						</thead>
@@ -410,17 +439,21 @@ export default function CourseFilterPage() {
 									<td className="px-4 py-2">{r.courseCode}</td>
 									<td className="px-4 py-2">{r.section}</td>
 									<td className="px-4 py-2">{r.facultyCode}</td>
-									<td className="px-4 py-2 whitespace-nowrap">{r.time}</td>
-									<td className="px-4 py-2">{r.room}</td>
-									<td className="px-4 py-2 text-center">{r.seat}</td>
+									<td className="px-4 py-2 whitespace-nowrap">{r.time}</td> <td className="px-4 py-2">{r.room}</td>
+									<td className="px-4 py-2 text-center">{r.seat}</td>{' '}
+									<td className="px-4 py-2">
+										<div className="flex items-center">
+											<input type="number" min="-10" max="10" value={r.priority ?? 0} onChange={(e) => changePriority(r, parseInt(e.target.value, 10) || 0)} className="w-12 h-8 text-center rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+										</div>
+									</td>
 									<td className="px-4 py-2">
 										<FaStar className={`cursor-pointer ${starredCourses.some((c) => c.id === r.id) ? 'text-yellow-400' : 'text-gray-400'}`} onClick={() => toggleStar(r)} />
 									</td>
 								</tr>
-							))}
+							))}{' '}
 							{(view === 'all' ? sorted : starredSorted).length === 0 && (
 								<tr>
-									<td colSpan={8} className="p-4 text-center text-gray-400 dark:text-gray-500">
+									<td colSpan={9} className="p-4 text-center text-gray-400 dark:text-gray-500">
 										{view === 'all' ? 'No matching records.' : 'No starred courses.'}
 									</td>
 								</tr>
