@@ -128,8 +128,8 @@ export default function CourseFilterPage() {
 
 				// Handle undefined priority values by treating them as 0
 				if (k === 'priority') {
-					v1 = (v1 === undefined) ? 0 : v1;
-					v2 = (v2 === undefined) ? 0 : v2;
+					v1 = v1 === undefined ? 0 : v1;
+					v2 = v2 === undefined ? 0 : v2;
 				}
 
 				// Special handling for the starred property - boolean comparison
