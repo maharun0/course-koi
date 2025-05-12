@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react';
 import Image from 'next/image';
-import { FaStar } from 'react-icons/fa';
+import { FaStar, FaGithub } from 'react-icons/fa';
 
 // Updated CourseRow interface to match new CSV format
 interface CourseRow {
@@ -36,7 +36,7 @@ export default function CourseFilterPage() {
 	const [savedCourses, setSavedCourses] = useState<CourseRow[]>([]);
 	const [starredCourses, setStarredCourses] = useState<CourseRow[]>([]);
 	const [inputCourse, setInputCourse] = useState('');
-	const [showDialog, setShowDialog] = useState<'added' | 'error' | 'cleared' | null>(null);
+	const [showDialog, setShowDialog] = useState<string | null>(null);
 	const [activeCourse, setActiveCourse] = useState<string | null>(null);
 	const [dragging, setDragging] = useState<string | null>(null);
 	const [showClearPriorityConfirm, setShowClearPriorityConfirm] = useState(false);
@@ -468,7 +468,7 @@ export default function CourseFilterPage() {
 		<div className={`flex min-h-screen transition-colors`}>
 			{/* Sidebar */}
 			<aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 m-4 p-4 space-y-6 bg-gray-800/80 backdrop-blur rounded-lg shadow-lg">
-			<h2 className="text-xl font-semibold">Course Management</h2>
+				<h2 className="text-xl font-semibold">Course Management</h2>
 				<div className="space-y-2">
 					<button
 						onClick={() => {
@@ -575,10 +575,22 @@ export default function CourseFilterPage() {
 			</aside>
 
 			{/* Main Content */}
-			<main className="flex-1 p-6 space-y-6">
-				<div className="flex items-center justify-center">
-					<Image src="/course_koi.png" alt="Course Koi" width={64} height={64} className="rounded-full mr-4" />
-					<h1 className="text-5xl font-bold text-yellow-500">Course Koi?</h1>
+			<main className="flex-1 p-6 space-y-6 relative">
+				<div className="flex items-center justify-center relative">
+					<div className="flex items-center">
+						<Image src="/course_koi.png" alt="Course Koi" width={64} height={64} className="rounded-full mr-4" />
+						<h1 className="text-5xl font-bold text-yellow-500">Course Koi?</h1>
+					</div>
+					<a
+						href="https://github.com/maharun0/course-koi"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="absolute right-0 top-0 flex items-center px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 transition-colors"
+					>
+						<FaGithub className="mr-2 text-lg" />
+						<span className="text-sm">Star project on GitHub</span>
+						<FaStar className="ml-2 text-yellow-400" />
+					</a>
 				</div>
 				{(view === 'all' || view === 'starred') && (
 					<div className="flex justify-center mb-6 items-center space-x-4">
