@@ -18,14 +18,15 @@ interface CourseRow {
 }
 
 type SortKey = keyof CourseRow | "index";
+type SortDirection = "none" | "asc" | "desc";
 
 export default function CourseFilterPage() {
   const [rows, setRows] = useState<CourseRow[]>([]);
   const [query, setQuery] = useState("");
   const [starredQuery, setStarredQuery] = useState("");
-  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDirection }>({
     key: "index",
-    dir: "asc",
+    dir: "none",
   });
   const [savedCourses, setSavedCourses] = useState<CourseRow[]>([]);
   const [starredCourses, setStarredCourses] = useState<CourseRow[]>([]);
@@ -97,9 +98,8 @@ export default function CourseFilterPage() {
         r.room.toLowerCase().includes(q)
     );
   }, [rows, query, activeCourse]);
-
   const sorted = useMemo(() => {
-    if (sort.key === "index") return filtered;
+    if (sort.key === "index" || sort.dir === "none") return filtered;
     const k = sort.key as keyof CourseRow;
     return [...filtered].sort((a, b) => {
       let v1: string | number = a[k];
@@ -122,9 +122,8 @@ export default function CourseFilterPage() {
         r.room.toLowerCase().includes(q)
     );
   }, [starredCourses, starredQuery]);
-
   const starredSorted = useMemo(() => {
-    if (sort.key === "index") return starredFiltered;
+    if (sort.key === "index" || sort.dir === "none") return starredFiltered;
     const k = sort.key as keyof CourseRow;
     return [...starredFiltered].sort((a, b) => {
       let v1: string | number = a[k];
@@ -136,16 +135,23 @@ export default function CourseFilterPage() {
       return 0;
     });
   }, [starredFiltered, sort]);
-
   // UI helpers
   const toggleSort = (key: SortKey) => {
-    setSort((prev) =>
-      prev.key === key
-        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
-        : { key, dir: "asc" }
-    );
+    setSort((prev) => {
+      // If clicking a different column than current sort
+      if (prev.key !== key) {
+        return { key, dir: "asc" };
+      }
+      
+      // If clicking the same column, cycle through states
+      switch (prev.dir) {
+        case "none": return { key, dir: "asc" };
+        case "asc": return { key, dir: "desc" };
+        case "desc": return { key: "index", dir: "none" };
+        default: return { key: "index", dir: "none" };
+      }
+    });
   };
-
   const header = (label: string, key: SortKey) => (
     <th
       key={label}
@@ -153,7 +159,7 @@ export default function CourseFilterPage() {
       className="px-4 py-2 text-left text-sm font-semibold cursor-pointer select-none hover:underline text-inherit"
     >
       {label}
-      {sort.key === key && (sort.dir === "asc" ? " ↑" : " ↓")}
+      {sort.key === key && sort.dir !== "none" && (sort.dir === "asc" ? " ↑" : " ↓")}
     </th>
   );
 
