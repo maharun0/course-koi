@@ -579,7 +579,7 @@ export default function CourseFilterPage() {
 				<div className="flex items-center justify-center relative">
 					<div className="flex items-center">
 						<Image src="/course_koi.png" alt="Course Koi" width={64} height={64} className="rounded-full mr-4" />
-						<h1 className="text-5xl font-bold text-yellow-500">Course Koi?</h1>
+						<h1 className="text-5xl font-bold text-[#FBB949]">Course Koi?</h1>
 					</div>
 					<a
 						href="https://github.com/maharun0/course-koi"
