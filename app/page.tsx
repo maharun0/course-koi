@@ -16,6 +16,7 @@ interface CourseRow {
 	room: string;
 	seat: number;
 	priority?: number; // Optional priority value for sorting
+	starred?: boolean; // Whether the course is starred
 }
 
 type SortKey = keyof CourseRow | 'index';
@@ -98,6 +99,7 @@ export default function CourseFilterPage() {
 		let base = rows.map((row) => ({
 			...row,
 			priority: coursePriorities[row.id] ?? undefined,
+			starred: starredCourses.some((c) => c.id === row.id),
 		}));
 
 		// First filter by active course if set (from sidebar)
@@ -107,13 +109,11 @@ export default function CourseFilterPage() {
 		if (selectedAllCourses.length > 0) {
 			base = base.filter((r) => selectedAllCourses.includes(r.courseCode));
 		}
-
 		// Then apply text search if any
 		if (!query) return base;
 		const q = query.toLowerCase();
 		return base.filter((r) => r.courseCode.toLowerCase().includes(q) || r.facultyCode.toLowerCase().includes(q) || r.room.toLowerCase().includes(q));
-	}, [rows, query, activeCourse, coursePriorities, selectedAllCourses]);
-	// Multi-column sorting function
+	}, [rows, query, activeCourse, coursePriorities, selectedAllCourses, starredCourses]); // Multi-column sorting function
 	const applyMultiSort = (items: CourseRow[], sortConfigs: SortConfig[]) => {
 		if (sortConfigs.length === 0) return items;
 
@@ -122,13 +122,28 @@ export default function CourseFilterPage() {
 			for (const sort of sortConfigs) {
 				if (sort.dir === 'none') continue;
 				const k = sort.key as keyof CourseRow;
-				let v1: string | number | undefined = a[k];
-				let v2: string | number | undefined = b[k];
+				let v1: string | number | boolean | undefined = a[k];
+				let v2: string | number | boolean | undefined = b[k];
 
 				// Handle undefined priority values
 				if (k === 'priority') {
-					v1 = v1 ?? 0; // Default to 0 if undefined
-					v2 = v2 ?? 0; // Default to 0 if undefined
+					v1 = v1 ?? 0; // Default to 0 if undefined					v2 = v2 ?? 0; // Default to 0 if undefined
+				}
+
+				// Special handling for the starred property - boolean comparison
+				if (k === 'starred') {
+					const b1 = v1 === true;
+					const b2 = v2 === true;
+					if (b1 !== b2) {
+						return sort.dir === 'asc'
+							? b1
+								? 1
+								: -1 // For ascending: false (not starred) comes before true (starred)
+							: b1
+							? -1
+							: 1; // For descending: true (starred) comes before false (not starred)
+					}
+					continue;
 				}
 
 				// Special handling for section - convert to number for numeric sorting
@@ -204,6 +219,7 @@ export default function CourseFilterPage() {
 		const base = starredCourses.map((row) => ({
 			...row,
 			priority: coursePriorities[row.id] ?? undefined,
+			starred: true,
 		}));
 
 		// First, filter by selected course codes if any
@@ -502,11 +518,10 @@ export default function CourseFilterPage() {
 								{header('#', 'index')}
 								{header('Course', 'courseCode')}
 								{header('Sec', 'section')}
-								{header('Faculty', 'facultyCode')} {header('Time', 'time')}
-								{header('Room', 'room')}
+								{header('Faculty', 'facultyCode')} {header('Time', 'time')} {header('Room', 'room')}
 								{header('Seats', 'seat')}
 								{header('Priority', 'priority')}
-								<th className="px-4 py-2"></th> {/* Empty header for star */}
+								{header('Star', 'starred')}
 							</tr>
 						</thead>
 						<tbody>
@@ -517,7 +532,7 @@ export default function CourseFilterPage() {
 									<td className="px-4 py-2">{r.section}</td>
 									<td className="px-4 py-2">{r.facultyCode}</td>
 									<td className="px-4 py-2 whitespace-nowrap">{r.time}</td> <td className="px-4 py-2">{r.room}</td>
-									<td className="px-4 py-2 text-center">{r.seat}</td>{' '}
+									<td className="px-4 py-2">{r.seat}</td>
 									<td className="px-4 py-2">
 										<div className="flex items-center">
 											<input type="number" min="-10" max="10" value={r.priority ?? 0} onChange={(e) => changePriority(r, parseInt(e.target.value, 10) || 0)} className="w-12 h-8 text-center rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
