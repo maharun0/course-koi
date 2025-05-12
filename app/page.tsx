@@ -22,8 +22,8 @@ type SortDirection = 'none' | 'asc' | 'desc';
 
 // Define a type for a single sort configuration
 interface SortConfig {
-  key: SortKey;
-  dir: SortDirection;
+	key: SortKey;
+	dir: SortDirection;
 }
 
 export default function CourseFilterPage() {
@@ -93,30 +93,41 @@ export default function CourseFilterPage() {
 		const q = query.toLowerCase();
 		return base.filter((r) => r.courseCode.toLowerCase().includes(q) || r.facultyCode.toLowerCase().includes(q) || r.room.toLowerCase().includes(q));
 	}, [rows, query, activeCourse]);
-	
 	// Multi-column sorting function
 	const applyMultiSort = (items: CourseRow[], sortConfigs: SortConfig[]) => {
 		if (sortConfigs.length === 0) return items;
-		
+
 		return [...items].sort((a, b) => {
 			// Apply each sort config in order until a non-zero comparison is found
 			for (const sort of sortConfigs) {
 				if (sort.dir === 'none') continue;
-				
+
 				const k = sort.key as keyof CourseRow;
 				let v1: string | number = a[k];
 				let v2: string | number = b[k];
-				
+
+				// Special handling for section - convert to number for numeric sorting
+				if (k === 'section') {
+					const n1 = parseInt(v1 as string, 10);
+					const n2 = parseInt(v2 as string, 10);
+					if (!isNaN(n1) && !isNaN(n2)) {
+						if (n1 < n2) return sort.dir === 'asc' ? -1 : 1;
+						if (n1 > n2) return sort.dir === 'asc' ? 1 : -1;
+						continue;
+					}
+				}
+
+				// Normal string comparison for other fields
 				if (typeof v1 === 'string') v1 = v1.toLowerCase();
 				if (typeof v2 === 'string') v2 = v2.toLowerCase();
-				
+
 				if (v1 < v2) return sort.dir === 'asc' ? -1 : 1;
 				if (v1 > v2) return sort.dir === 'asc' ? 1 : -1;
 			}
 			return 0;
 		});
 	};
-	
+
 	const sorted = useMemo(() => {
 		return applyMultiSort(filtered, sorts);
 	}, [filtered, sorts]);
@@ -126,22 +137,22 @@ export default function CourseFilterPage() {
 		const q = starredQuery.toLowerCase();
 		return starredCourses.filter((r) => r.courseCode.toLowerCase().includes(q) || r.facultyCode.toLowerCase().includes(q) || r.room.toLowerCase().includes(q));
 	}, [starredCourses, starredQuery]);
-	
+
 	const starredSorted = useMemo(() => {
 		return applyMultiSort(starredFiltered, sorts);
 	}, [starredFiltered, sorts]);
-	
+
 	// UI helpers
 	const toggleSort = (key: SortKey) => {
 		setSorts((prevSorts) => {
 			// Check if this column is already in the sort array
-			const existingIndex = prevSorts.findIndex(s => s.key === key);
-			
+			const existingIndex = prevSorts.findIndex((s) => s.key === key);
+
 			// If it exists, update its direction
 			if (existingIndex >= 0) {
 				const existing = prevSorts[existingIndex];
 				const newSorts = [...prevSorts];
-				
+
 				// Cycle through sort states
 				switch (existing.dir) {
 					case 'none':
@@ -155,26 +166,26 @@ export default function CourseFilterPage() {
 						newSorts.splice(existingIndex, 1);
 						break;
 				}
-				
+
 				return newSorts;
 			}
-			
+
 			// If not exists, add it with 'asc' direction
 			return [...prevSorts, { key, dir: 'asc' }];
 		});
 	};
-	
+
 	const getSortInfo = (key: SortKey) => {
-		const sortIndex = sorts.findIndex(s => s.key === key);
+		const sortIndex = sorts.findIndex((s) => s.key === key);
 		if (sortIndex === -1) return { active: false };
-		
+
 		return {
 			active: true,
 			direction: sorts[sortIndex].dir,
-			order: sortIndex + 1
+			order: sortIndex + 1,
 		};
 	};
-	
+
 	const header = (label: string, key: SortKey) => {
 		const sortInfo = getSortInfo(key);
 		return (
