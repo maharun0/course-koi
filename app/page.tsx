@@ -104,9 +104,7 @@ export default function CourseFilterPage() {
 
 				const k = sort.key as keyof CourseRow;
 				let v1: string | number = a[k];
-				let v2: string | number = b[k];
-
-				// Special handling for section - convert to number for numeric sorting
+				let v2: string | number = b[k];				// Special handling for section - convert to number for numeric sorting
 				if (k === 'section') {
 					const n1 = parseInt(v1 as string, 10);
 					const n2 = parseInt(v2 as string, 10);
@@ -114,6 +112,48 @@ export default function CourseFilterPage() {
 						if (n1 < n2) return sort.dir === 'asc' ? -1 : 1;
 						if (n1 > n2) return sort.dir === 'asc' ? 1 : -1;
 						continue;
+					}
+				}
+						// Special handling for time column - ensure days are sorted first (MW, RA, ST) and then by AM/PM
+				if (k === 'time') {
+					const t1 = v1 as string;
+					const t2 = v2 as string;
+					
+					// Extract day patterns (assuming they appear at the start of the time string)
+					const dayPattern1 = t1.substring(0, 2);
+					const dayPattern2 = t2.substring(0, 2);
+					
+					// Define day pattern priority (MW, RA, ST, etc.)
+					const dayPriority: Record<string, number> = { 'MW': 1, 'RA': 2, 'ST': 3 };
+					
+					// Compare day patterns first
+					if (dayPattern1 !== dayPattern2) {
+						const priority1 = dayPriority[dayPattern1] || 999;
+						const priority2 = dayPriority[dayPattern2] || 999;
+						if (priority1 < priority2) return sort.dir === 'asc' ? -1 : 1;
+						if (priority1 > priority2) return sort.dir === 'asc' ? 1 : -1;
+					}
+					
+					// If same day pattern, check AM/PM
+					const isAM1 = t1.includes('AM');
+					const isAM2 = t2.includes('AM');
+					const isPM1 = t1.includes('PM');
+					const isPM2 = t2.includes('PM');
+					
+					// AM should come before PM for same day pattern
+					if (isAM1 && isPM2) return sort.dir === 'asc' ? -1 : 1;
+					if (isPM1 && isAM2) return sort.dir === 'asc' ? 1 : -1;
+					
+					// If both are AM or both are PM, try to extract and compare the hour
+					const hourMatch1 = t1.match(/(\d+)(?::(\d+))?\s*(AM|PM)/i);
+					const hourMatch2 = t2.match(/(\d+)(?::(\d+))?\s*(AM|PM)/i);
+					
+					if (hourMatch1 && hourMatch2) {
+						const hour1 = parseInt(hourMatch1[1], 10);
+						const hour2 = parseInt(hourMatch2[1], 10);
+						
+						if (hour1 < hour2) return sort.dir === 'asc' ? -1 : 1;
+						if (hour1 > hour2) return sort.dir === 'asc' ? 1 : -1;
 					}
 				}
 
