@@ -39,6 +39,7 @@ export default function CourseFilterPage() {
 	const [showDialog, setShowDialog] = useState<string | null>(null);
 	const [activeCourse, setActiveCourse] = useState<string | null>(null);
 	const [dragging, setDragging] = useState<string | null>(null);
+	const [showClearPriorityConfirm, setShowClearPriorityConfirm] = useState(false);
 	const [view, setView] = useState<'all' | 'starred'>('all');
 	const [coursePriorities, setCoursePriorities] = useState<Record<string, number>>({});
 	const [selectedStarredCourses, setSelectedStarredCourses] = useState<string[]>([]);
@@ -379,7 +380,6 @@ export default function CourseFilterPage() {
 			}
 		});
 	};
-
 	// Change priority for a course
 	const changePriority = (course: CourseRow, priority: number) => {
 		setCoursePriorities((prev) => ({
@@ -388,12 +388,19 @@ export default function CourseFilterPage() {
 		}));
 	};
 
+	// Clear all priority values after confirmation
+	const clearAllPriorities = () => {
+		setCoursePriorities({});
+		setShowClearPriorityConfirm(false);
+		setShowDialog('cleared');
+		setTimeout(() => setShowDialog(null), 3000);
+	};
+
 	return (
 		<div className={`flex min-h-screen transition-colors`}>
 			{/* Sidebar */}
 			<aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 m-4 p-4 space-y-6 bg-gray-800/80 backdrop-blur rounded-lg shadow-lg">
 				<h2 className="text-xl font-semibold">Course Management</h2>
-
 				<div className="space-y-2">
 					<button
 						onClick={() => {
@@ -433,7 +440,6 @@ export default function CourseFilterPage() {
 						</button>
 					))}
 				</div>
-
 				<div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
 					<button
 						onClick={() => {
@@ -443,10 +449,9 @@ export default function CourseFilterPage() {
 						className={`w-full text-left px-3 py-2 rounded hover:bg-indigo-500/20 ${view === 'starred' ? 'bg-indigo-500 text-white' : ''} flex items-center cursor-pointer`}
 					>
 						<FaStar className="mr-2 text-yellow-400" />
-						Starred Courses
+						Starred Sections
 					</button>
 				</div>
-
 				<div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
 					<h3 className="text-sm font-medium">Add Course</h3>
 					<input type="text" value={inputCourse} onChange={(e) => setInputCourse(e.target.value)} onKeyDown={handleKeyPress} placeholder="Search & add course" className="w-full border rounded p-2 bg-gray-900 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40" />
@@ -458,14 +463,17 @@ export default function CourseFilterPage() {
 									{course}
 								</li>
 							))}
-					</ul>
+					</ul>{' '}
 					<button onClick={addCourse} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded disabled:opacity-50 cursor-pointer" disabled={!inputCourse || savedCourses.some((c) => c.courseCode === inputCourse)}>
 						Add
 					</button>
-				</div>
-
+					<button onClick={() => setShowClearPriorityConfirm(true)} className="w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-2 rounded cursor-pointer hover:bg-gray-600 hover:text-white mt-2">
+						Clear All Priorities
+					</button>
+				</div>{' '}
 				{showDialog === 'added' && <div className="fixed bottom-4 right-4 bg-green-500 text-white p-3 rounded-md shadow-lg">Course Added!</div>}
 				{showDialog === 'error' && <div className="fixed bottom-4 right-4 bg-red-500 text-white p-3 rounded-md shadow-lg">Course not found. Enter the course correctly.</div>}
+				{showDialog === 'cleared' && <div className="fixed bottom-4 right-4 bg-green-500 text-white p-3 rounded-md shadow-lg">All priorities cleared!</div>}
 			</aside>
 
 			{/* Main Content */}
@@ -517,7 +525,7 @@ export default function CourseFilterPage() {
 							<tr>
 								{header('#', 'index')}
 								{header('Course', 'courseCode')}
-								{header('Sec', 'section')}
+								{header('Section', 'section')}
 								{header('Faculty', 'facultyCode')} {header('Time', 'time')} {header('Room', 'room')}
 								{header('Seats', 'seat')}
 								{header('Priority', 'priority')}
@@ -550,10 +558,28 @@ export default function CourseFilterPage() {
 									</td>
 								</tr>
 							)}
-						</tbody>
+						</tbody>{' '}
 					</table>
 				</div>
 			</main>
+
+			{/* Priority Clear Confirmation Modal - Positioned at the root level */}
+			{showClearPriorityConfirm && (
+				<div className="fixed inset-0 bg-gray-400/30 backdrop-blur-sm flex items-center justify-center z-50">
+					<div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md mx-auto">
+						<h3 className="text-lg font-bold mb-4">Clear All Priorities?</h3>
+						<p className="mb-6">Are you sure you want to clear all priority values? This action cannot be undone.</p>
+						<div className="flex justify-end space-x-3">
+							<button onClick={() => setShowClearPriorityConfirm(false)} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer">
+								Cancel
+							</button>
+							<button onClick={clearAllPriorities} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer">
+								Clear All
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
