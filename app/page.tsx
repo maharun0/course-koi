@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { FaStar } from 'react-icons/fa';
 
@@ -36,7 +36,7 @@ export default function CourseFilterPage() {
 	const [savedCourses, setSavedCourses] = useState<CourseRow[]>([]);
 	const [starredCourses, setStarredCourses] = useState<CourseRow[]>([]);
 	const [inputCourse, setInputCourse] = useState('');
-	const [showDialog, setShowDialog] = useState<string | null>(null);
+	const [showDialog, setShowDialog] = useState<'added' | 'error' | 'cleared' | null>(null);
 	const [activeCourse, setActiveCourse] = useState<string | null>(null);
 	const [dragging, setDragging] = useState<string | null>(null);
 	const [showClearPriorityConfirm, setShowClearPriorityConfirm] = useState(false);
@@ -44,6 +44,10 @@ export default function CourseFilterPage() {
 	const [coursePriorities, setCoursePriorities] = useState<Record<string, number>>({});
 	const [selectedStarredCourses, setSelectedStarredCourses] = useState<string[]>([]);
 	const [selectedAllCourses, setSelectedAllCourses] = useState<string[]>([]);
+	const [showFilterMenu, setShowFilterMenu] = useState(false);
+	const [filterColumns, setFilterColumns] = useState<string[]>(['courseCode', 'facultyCode', 'room']);
+	const filterMenuRef = useRef<HTMLDivElement>(null);
+	const filterButtonRef = useRef<HTMLButtonElement>(null);
 
 	// Fetch and parse new CSV format
 	useEffect(() => {
@@ -70,6 +74,7 @@ export default function CourseFilterPage() {
 				setRows(parsed);
 			});
 	}, []);
+
 	// Load saved and starred courses from localStorage
 	useEffect(() => {
 		const storedSaved = JSON.parse(localStorage.getItem('savedCourses') ?? '[]');
@@ -84,6 +89,7 @@ export default function CourseFilterPage() {
 	useEffect(() => {
 		localStorage.setItem('savedCourses', JSON.stringify(savedCourses));
 	}, [savedCourses]);
+
 	// Save starred courses to localStorage
 	useEffect(() => {
 		localStorage.setItem('starredCourses', JSON.stringify(starredCourses));
@@ -94,8 +100,32 @@ export default function CourseFilterPage() {
 		localStorage.setItem('coursePriorities', JSON.stringify(coursePriorities));
 	}, [coursePriorities]);
 
+	// Handle clicks outside the filter menu
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (
+				showFilterMenu &&
+				filterMenuRef.current &&
+				!filterMenuRef.current.contains(event.target as Node) &&
+				filterButtonRef.current &&
+				!filterButtonRef.current.contains(event.target as Node)
+			) {
+				if (filterColumns.length === 0) {
+					setFilterColumns(['courseCode', 'facultyCode', 'room']);
+				}
+				setShowFilterMenu(false);
+			}
+		};
+
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [showFilterMenu, filterColumns]);
+
 	// Derived data
 	const courseOptions = useMemo(() => Array.from(new Set(rows.map((r) => r.courseCode))).sort(), [rows]);
+
 	const filtered = useMemo(() => {
 		let base = rows.map((row) => ({
 			...row,
@@ -110,11 +140,19 @@ export default function CourseFilterPage() {
 		if (selectedAllCourses.length > 0) {
 			base = base.filter((r) => selectedAllCourses.includes(r.courseCode));
 		}
+
 		// Then apply text search if any
 		if (!query) return base;
 		const q = query.toLowerCase();
-		return base.filter((r) => r.courseCode.toLowerCase().includes(q) || r.facultyCode.toLowerCase().includes(q) || r.room.toLowerCase().includes(q));
-	}, [rows, query, activeCourse, coursePriorities, selectedAllCourses, starredCourses]); // Multi-column sorting function
+		return base.filter((r) =>
+			filterColumns.some((col) => {
+				const value = r[col as keyof CourseRow];
+				return typeof value === 'string' && value.toLowerCase().includes(q);
+			})
+		);
+	}, [rows, query, activeCourse, coursePriorities, selectedAllCourses, starredCourses, filterColumns]);
+
+	// Multi-column sorting function
 	const applyMultiSort = (items: CourseRow[], sortConfigs: SortConfig[]) => {
 		if (sortConfigs.length === 0) return items;
 
@@ -158,6 +196,7 @@ export default function CourseFilterPage() {
 						continue;
 					}
 				}
+
 				// Special handling for time column - ensure days are sorted first (MW, RA, ST) and then by AM/PM
 				if (k === 'time') {
 					const t1 = v1 as string;
@@ -199,7 +238,9 @@ export default function CourseFilterPage() {
 						if (hour1 < hour2) return sort.dir === 'asc' ? -1 : 1;
 						if (hour1 > hour2) return sort.dir === 'asc' ? 1 : -1;
 					}
-				} // Normal string comparison for other fields
+				}
+
+				// Normal string comparison for other fields
 				if (typeof v1 === 'string') v1 = v1.toLowerCase();
 				if (typeof v2 === 'string') v2 = v2.toLowerCase();
 
@@ -217,6 +258,7 @@ export default function CourseFilterPage() {
 	const sorted = useMemo(() => {
 		return applyMultiSort(filtered, sorts);
 	}, [filtered, sorts]);
+
 	const starredFiltered = useMemo(() => {
 		const base = starredCourses.map((row) => ({
 			...row,
@@ -233,8 +275,13 @@ export default function CourseFilterPage() {
 		// Then apply text search if any
 		if (!starredQuery) return filtered;
 		const q = starredQuery.toLowerCase();
-		return filtered.filter((r) => r.courseCode.toLowerCase().includes(q) || r.facultyCode.toLowerCase().includes(q) || r.room.toLowerCase().includes(q));
-	}, [starredCourses, starredQuery, coursePriorities, selectedStarredCourses]);
+		return filtered.filter((r) =>
+			filterColumns.some((col) => {
+				const value = r[col as keyof CourseRow];
+				return typeof value === 'string' && value.toLowerCase().includes(q);
+			})
+		);
+	}, [starredCourses, starredQuery, coursePriorities, selectedStarredCourses, filterColumns]);
 
 	const starredSorted = useMemo(() => {
 		return applyMultiSort(starredFiltered, sorts);
@@ -299,6 +346,20 @@ export default function CourseFilterPage() {
 		);
 	};
 
+	// Filter menu logic
+	const toggleFilterColumn = (column: string) => {
+		setFilterColumns((prev) =>
+			prev.includes(column) ? prev.filter((c) => c !== column) : [...prev, column]
+		);
+	};
+
+	const handleFilterMenuClose = () => {
+		if (filterColumns.length === 0) {
+			setFilterColumns(['courseCode', 'facultyCode', 'room']);
+		}
+		setShowFilterMenu(false);
+	};
+
 	// Sidebar logic
 	const addCourse = () => {
 		const upperCaseCourse = inputCourse.toUpperCase().trim();
@@ -319,6 +380,7 @@ export default function CourseFilterPage() {
 			addCourse();
 		}
 	};
+
 	const handleSelectCourse = (course: string) => {
 		if (course === 'All Courses') {
 			setActiveCourse(null);
@@ -351,7 +413,9 @@ export default function CourseFilterPage() {
 		newOrder.splice(index, 0, savedCourses.find((c) => c.courseCode === dragging)!);
 		setSavedCourses(newOrder);
 		setDragging(null);
-	}; // Toggle star for a course
+	};
+
+	// Toggle star for a course
 	const toggleStar = (course: CourseRow) => {
 		if (starredCourses.some((c) => c.id === course.id)) {
 			setStarredCourses(starredCourses.filter((c) => c.id !== course.id));
@@ -360,7 +424,9 @@ export default function CourseFilterPage() {
 		} else {
 			setStarredCourses([...starredCourses, course]);
 		}
-	}; // Toggle a course in the selected starred courses filter
+	};
+
+	// Toggle a course in the selected starred courses filter
 	const toggleStarredCourseFilter = (courseCode: string) => {
 		setSelectedStarredCourses((prev) => {
 			if (prev.includes(courseCode)) {
@@ -381,6 +447,7 @@ export default function CourseFilterPage() {
 			}
 		});
 	};
+
 	// Change priority for a course
 	const changePriority = (course: CourseRow, priority: number) => {
 		setCoursePriorities((prev) => ({
@@ -401,7 +468,7 @@ export default function CourseFilterPage() {
 		<div className={`flex min-h-screen transition-colors`}>
 			{/* Sidebar */}
 			<aside className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-700 m-4 p-4 space-y-6 bg-gray-800/80 backdrop-blur rounded-lg shadow-lg">
-				<h2 className="text-xl font-semibold">Course Management</h2>
+			<h2 className="text-xl font-semibold">Course Management</h2>
 				<div className="space-y-2">
 					<button
 						onClick={() => {
@@ -455,26 +522,56 @@ export default function CourseFilterPage() {
 				</div>
 				<div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
 					<h3 className="text-sm font-medium">Add Course</h3>
-					<input type="text" value={inputCourse} onChange={(e) => setInputCourse(e.target.value)} onKeyDown={handleKeyPress} placeholder="Search & add course" className="w-full border rounded p-2 bg-gray-900 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40" />
+					<input
+						type="text"
+						value={inputCourse}
+						onChange={(e) => setInputCourse(e.target.value)}
+						onKeyDown={handleKeyPress}
+						placeholder="Search & add course"
+						className="w-full border rounded p-2 bg-gray-900 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40"
+					/>
 					<ul className="space-y-2 max-h-60 overflow-y-auto">
 						{courseOptions
 							.filter((course) => course.toLowerCase().includes(inputCourse.toLowerCase()))
 							.map((course) => (
-								<li key={course} onClick={() => setInputCourse(course)} className="cursor-pointer hover:bg-indigo-500/20 px-3 py-2">
+								<li
+									key={course}
+									onClick={() => setInputCourse(course)}
+									className="cursor-pointer hover:bg-indigo-500/20 px-3 py-2"
+								>
 									{course}
 								</li>
 							))}
-					</ul>{' '}
-					<button onClick={addCourse} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded disabled:opacity-50 cursor-pointer" disabled={!inputCourse || savedCourses.some((c) => c.courseCode === inputCourse)}>
+					</ul>
+					<button
+						onClick={addCourse}
+						className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded disabled:opacity-50 cursor-pointer"
+						disabled={!inputCourse || savedCourses.some((c) => c.courseCode === inputCourse)}
+					>
 						Add
 					</button>
-					<button onClick={() => setShowClearPriorityConfirm(true)} className="w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-2 rounded cursor-pointer hover:bg-gray-600 hover:text-white mt-2">
+					<button
+						onClick={() => setShowClearPriorityConfirm(true)}
+						className="w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-3 py-2 rounded cursor-pointer hover:bg-gray-600 hover:text-white mt-2"
+					>
 						Clear All Priorities
 					</button>
-				</div>{' '}
-				{showDialog === 'added' && <div className="fixed bottom-4 right-4 bg-green-500 text-white p-3 rounded-md shadow-lg">Course Added!</div>}
-				{showDialog === 'error' && <div className="fixed bottom-4 right-4 bg-red-500 text-white p-3 rounded-md shadow-lg">Course not found. Enter the course correctly.</div>}
-				{showDialog === 'cleared' && <div className="fixed bottom-4 right-4 bg-green-500 text-white p-3 rounded-md shadow-lg">All priorities cleared!</div>}
+				</div>
+				{showDialog === 'added' && (
+					<div className="fixed bottom-4 right-4 bg-green-500 text-white p-3 rounded-md shadow-lg">
+						Course Added!
+					</div>
+				)}
+				{showDialog === 'error' && (
+					<div className="fixed bottom-4 right-4 bg-red-500 text-white p-3 rounded-md shadow-lg">
+						Course not found. Enter the course correctly.
+					</div>
+				)}
+				{showDialog === 'cleared' && (
+					<div className="fixed bottom-4 right-4 bg-green-500 text-white p-3 rounded-md shadow-lg">
+						All priorities cleared!
+					</div>
+				)}
 			</aside>
 
 			{/* Main Content */}
@@ -482,43 +579,110 @@ export default function CourseFilterPage() {
 				<div className="flex items-center justify-center">
 					<Image src="/course_koi.png" alt="Course Koi" width={64} height={64} className="rounded-full mr-4" />
 					<h1 className="text-5xl font-bold text-yellow-500">Course Koi?</h1>
-				</div>{' '}
+				</div>
 				{(view === 'all' || view === 'starred') && (
-					<div className="flex justify-center mb-6">
-						<input type="text" value={view === 'all' ? query : starredQuery} onChange={(e) => (view === 'all' ? setQuery(e.target.value) : setStarredQuery(e.target.value))} placeholder="Search by course code, faculty code, or room number…" className="w-full max-w-lg border rounded p-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40" />{' '}
+					<div className="flex justify-center mb-6 items-center space-x-4">
+						<input
+							type="text"
+							value={view === 'all' ? query : starredQuery}
+							onChange={(e) => (view === 'all' ? setQuery(e.target.value) : setStarredQuery(e.target.value))}
+							placeholder="Search by course code, faculty code, or room number…"
+							className="w-full max-w-lg border rounded p-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40"
+						/>
+						<div className="relative">
+							<button
+								ref={filterButtonRef}
+								onClick={() => setShowFilterMenu(!showFilterMenu)}
+								className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded cursor-pointer"
+							>
+								Filter by
+							</button>
+							{showFilterMenu && (
+								<div
+									ref={filterMenuRef}
+									className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10"
+								>
+									<div className="p-2">
+										{['courseCode', 'facultyCode', 'room', 'section', 'time'].map((col) => (
+											<label key={col} className="flex items-center space-x-2 p-1 cursor-pointer">
+												<input
+													type="checkbox"
+													checked={filterColumns.includes(col)}
+													onChange={() => toggleFilterColumn(col)}
+													className="form-checkbox h-4 w-4 text-indigo-600"
+												/>
+												<span className="text-sm capitalize">
+													{col === 'courseCode' ? 'Course' : col === 'facultyCode' ? 'Faculty' : col}
+												</span>
+											</label>
+										))}
+									</div>
+									<div className="p-2 border-t border-gray-200 dark:border-gray-700">
+										<button
+											onClick={handleFilterMenuClose}
+											className="w-full text-center px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+										>
+											Close
+										</button>
+									</div>
+								</div>
+							)}
+						</div>
 					</div>
-				)}{' '}
+				)}
 				{view === 'all' && savedCourses.length > 0 && !activeCourse && (
 					<div className="mb-4">
 						<div className="flex flex-wrap gap-2 justify-center">
 							{Array.from(new Set(savedCourses.map((c) => c.courseCode)))
 								.sort()
 								.map((courseCode) => (
-									<button key={courseCode} onClick={() => toggleAllCourseFilter(courseCode)} className={`px-2 py-1 text-xs rounded border ${selectedAllCourses.includes(courseCode) ? 'bg-gray-600 text-white border-gray-600' : 'bg-gray-200 dark:bg-gray-900 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600'} flex items-center cursor-pointer`}>
+									<button
+										key={courseCode}
+										onClick={() => toggleAllCourseFilter(courseCode)}
+										className={`px-2 py-1 text-xs rounded border ${
+											selectedAllCourses.includes(courseCode)
+												? 'bg-gray-600 text-white border-gray-600'
+												: 'bg-gray-200 dark:bg-gray-900 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600'
+										} flex items-center cursor-pointer`}
+									>
 										{courseCode}
-										{selectedAllCourses.includes(courseCode) && <span className="ml-1 inline-flex items-center">✕</span>}
+										{selectedAllCourses.includes(courseCode) && (
+											<span className="ml-1 inline-flex items-center">✕</span>
+										)}
 									</button>
 								))}
 						</div>
 					</div>
-				)}{' '}
+				)}
 				{view === 'starred' && starredCourses.length > 0 && (
 					<div className="mb-4">
 						<div className="flex flex-wrap gap-2 justify-center">
-							{' '}
 							{Array.from(new Set(starredCourses.map((c) => c.courseCode)))
 								.sort()
 								.map((courseCode) => (
-									<button key={courseCode} onClick={() => toggleStarredCourseFilter(courseCode)} className={`px-2 py-1 text-xs rounded border ${selectedStarredCourses.includes(courseCode) ? 'bg-gray-600 text-white border-gray-600' : 'bg-gray-200 dark:bg-gray-900 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600'} flex items-center cursor-pointer`}>
+									<button
+										key={courseCode}
+										onClick={() => toggleStarredCourseFilter(courseCode)}
+										className={`px-2 py-1 text-xs rounded border ${
+											selectedStarredCourses.includes(courseCode)
+												? 'bg-gray-600 text-white border-gray-600'
+												: 'bg-gray-200 dark:bg-gray-900 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600'
+										} flex items-center cursor-pointer`}
+									>
 										{courseCode}
-										{selectedStarredCourses.includes(courseCode) && <span className="ml-1 inline-flex items-center">✕</span>}
+										{selectedStarredCourses.includes(courseCode) && (
+											<span className="ml-1 inline-flex items-center">✕</span>
+										)}
 									</button>
 								))}
 						</div>
 					</div>
 				)}
 				<div className="text-xs text-center text-gray-500 dark:text-gray-400 mb-3">
-					<p>Set priority values to rank sections. Click column headers to sort. Click again to toggle ascending/descending/turn off sorting.</p>
+					<p>
+						Set priority values to rank sections. Click column headers to sort. Click again to toggle
+						ascending/descending/turn off sorting.
+					</p>
 				</div>
 				<div className="overflow-x-auto">
 					<table className="min-w-full shadow rounded bg-white dark:bg-gray-800">
@@ -527,7 +691,9 @@ export default function CourseFilterPage() {
 								{header('#', 'index')}
 								{header('Course', 'courseCode')}
 								{header('Section', 'section')}
-								{header('Faculty', 'facultyCode')} {header('Time', 'time')} {header('Room', 'room')}
+								{header('Faculty', 'facultyCode')}
+								{header('Time', 'time')}
+								{header('Room', 'room')}
 								{header('Seats', 'seat')}
 								{header('Priority', 'priority')}
 								{header('Star', 'starred')}
@@ -540,26 +706,44 @@ export default function CourseFilterPage() {
 									<td className="px-4 py-2">{r.courseCode}</td>
 									<td className="px-4 py-2">{r.section}</td>
 									<td className="px-4 py-2">{r.facultyCode}</td>
-									<td className="px-4 py-2 whitespace-nowrap">{r.time}</td> <td className="px-4 py-2">{r.room}</td>
+									<td className="px-4 py-2 whitespace-nowrap">{r.time}</td>
+									<td className="px-4 py-2">{r.room}</td>
 									<td className="px-4 py-2">{r.seat}</td>
 									<td className="px-4 py-2">
 										<div className="flex items-center">
-											<input type="number" min="-10" max="10" value={r.priority ?? 0} onChange={(e) => changePriority(r, parseInt(e.target.value, 10) || 0)} className="w-12 h-8 text-center rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+											<input
+												type="number"
+												min="-10"
+												max="10"
+												value={r.priority ?? 0}
+												onChange={(e) => changePriority(r, parseInt(e.target.value, 10) || 0)}
+												className="w-12 h-8 text-center rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+											/>
 										</div>
 									</td>
 									<td className="px-4 py-2">
-										<FaStar className={`cursor-pointer ${starredCourses.some((c) => c.id === r.id) ? 'text-yellow-400' : 'text-gray-400'}`} onClick={() => toggleStar(r)} />
+										<FaStar
+											className={`cursor-pointer ${
+												starredCourses.some((c) => c.id === r.id)
+													? 'text-yellow-400'
+													: 'text-gray-400'
+											}`}
+											onClick={() => toggleStar(r)}
+										/>
 									</td>
 								</tr>
-							))}{' '}
+							))}
 							{(view === 'all' ? sorted : starredSorted).length === 0 && (
 								<tr>
-									<td colSpan={9} className="p-4 text-center text-gray-400 dark:text-gray-500">
+									<td
+										colSpan={9}
+										className="p-4 text-center text-gray-400 dark:text-gray-500"
+									>
 										{view === 'all' ? 'No matching records.' : 'No starred courses.'}
 									</td>
 								</tr>
 							)}
-						</tbody>{' '}
+						</tbody>
 					</table>
 				</div>
 			</main>
@@ -571,10 +755,16 @@ export default function CourseFilterPage() {
 						<h3 className="text-lg font-bold mb-4">Clear All Priorities?</h3>
 						<p className="mb-6">Are you sure you want to clear all priority values? This action cannot be undone.</p>
 						<div className="flex justify-end space-x-3">
-							<button onClick={() => setShowClearPriorityConfirm(false)} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer">
+							<button
+								onClick={() => setShowClearPriorityConfirm(false)}
+								className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer"
+							>
 								Cancel
 							</button>
-							<button onClick={clearAllPriorities} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer">
+							<button
+								onClick={clearAllPriorities}
+								className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer"
+							>
 								Clear All
 							</button>
 						</div>
