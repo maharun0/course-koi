@@ -158,6 +158,6 @@ def extract_pdf_to_text_per_page(pdf_path, output_folder):
 
 # Example usage
 if __name__ == "__main__":
-    pdf_file_path = "./252-offered-courses-list.pdf"  # Your PDF file path
+    pdf_file_path = "./253-offered-courses-list-080925-v1-1.pdf"  # Your PDF file path
     output_folder_path = "pdf_output"  # Your output folder path
     extract_pdf_to_text_per_page(pdf_file_path, output_folder_path)
