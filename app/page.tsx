@@ -124,6 +124,7 @@ function CourseKoiApp() {
         setShowDialog={setShowDialog}
         coursePriorities={coursePriorities}
         setCoursePriorities={setCoursePriorities}
+        onTabChange={setActiveTab}
       />
 
       <main className="flex-1 p-4 h-screen flex flex-col overflow-hidden relative">

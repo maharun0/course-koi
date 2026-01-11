@@ -21,6 +21,7 @@ interface SidebarProps {
   setShowDialog: (value: string | null) => void;
   coursePriorities: Record<string, number>;
   setCoursePriorities: (priorities: Record<string, number>) => void;
+  onTabChange?: (tab: 'list' | 'schedule') => void;
 }
 
 export default function Sidebar({
@@ -37,6 +38,7 @@ export default function Sidebar({
   setSelectedStarredCourses,
   showDialog,
   setCoursePriorities,
+  onTabChange,
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,6 +59,7 @@ export default function Sidebar({
   const handleMyCourseClick = (courseCode: string) => {
     setView('all');
     setActiveCourse(courseCode);
+    onTabChange?.('list');
   };
 
   const handleAvailableCourseClick = (courseCode: string, isSaved: boolean) => {
@@ -108,6 +111,7 @@ export default function Sidebar({
             onClick={() => {
               setView('all');
               setActiveCourse(null);
+              onTabChange?.('list');
             }}
             className={`w-full text-left p-2 flex items-center gap-3 cursor-pointer rounded-xl transition-all duration-200 group border ${activeCourse === null && view === 'all'
               ? 'bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-500/20'
