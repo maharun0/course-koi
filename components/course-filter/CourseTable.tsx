@@ -33,7 +33,8 @@ export default function CourseTable({
     timeTruncate: 'max-w-[150px]',
     room: 'w-20',
     seat: 'w-16',
-    priority: 'w-32',
+    priority: 'w-24',
+    star: 'w-10',
   };
   // ------------------------------------------
 
@@ -90,6 +91,7 @@ export default function CourseTable({
                 {header('Rm', 'room', widths.room)}
                 {header('St', 'seat', widths.seat)}
                 {header('Priority', 'priority', widths.priority)}
+                <th className={`px-2 py-2 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider ${widths.star}`}>Star</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -109,7 +111,7 @@ export default function CourseTable({
                     <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-300">{r.room}</td>
                     <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-300">{r.seat}</td>
                     <td className="px-2 py-1 whitespace-nowrap text-xs">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center">
                         {/* Stepper for Priority */}
                         <div className="flex items-center bg-black/20 rounded-lg border border-white/10 overflow-hidden scale-90">
                           <button
@@ -133,12 +135,16 @@ export default function CourseTable({
                             +
                           </button>
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-2 py-1 whitespace-nowrap text-xs">
+                      <div className="flex items-center justify-center">
                         <button
                           onClick={() => toggleStar(r)}
                           className={`transition-all transform hover:scale-110 p-1 rounded-full hover:bg-white/10 ${isStarred ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-200'
                             }`}
                         >
-                          <FaStar size={14} />
+                          <FaStar />
                         </button>
                       </div>
                     </td>
