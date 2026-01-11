@@ -202,7 +202,7 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
             )}
 
             {/* Left: Schedule Grid */}
-            <div className="flex-1 glass rounded-xl p-4 overflow-hidden flex flex-col">
+            <div className="flex-1 glass rounded-xl p-3 overflow-hidden flex flex-col">
                 <div className="flex justify-between items-center mb-4 shrink-0">
                     <h2 className="text-xl font-bold text-white">Weekly Schedule</h2>
                     <div className="flex gap-2">
@@ -216,7 +216,7 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
                 </div>
 
                 {/* The Grid Container - Capture Target */}
-                <div ref={scheduleRef} className="p-4 bg-[#0f172a] rounded-lg border border-white/5 w-full h-full flex flex-col">
+                <div ref={scheduleRef} className="p-2 bg-[#0f172a] rounded-lg border border-white/5 w-full h-full flex flex-col">
                     <div className="flex-1 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-white/5 rounded-lg overflow-hidden border border-white/10 h-full relative">
 
                         {/* 1. Time Column */}
@@ -292,7 +292,7 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
             </div>
 
             {/* Right: Starred Sections Sidebar */}
-            <div className="w-full lg:w-64 glass rounded-xl p-4 flex flex-col shrink-0 lg:h-full h-auto max-h-[400px] lg:max-h-full">
+            <div className="w-full lg:w-64 glass rounded-xl p-3 flex flex-col shrink-0 lg:h-full h-auto max-h-[400px] lg:max-h-full">
                 <h3 className="text-sm font-bold text-white mb-3 flex items-center justify-between uppercase tracking-wider">
                     Starred
                     <span className="bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded text-xs">{courses.length}</span>
@@ -309,7 +309,7 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
                             <button
                                 key={course.id}
                                 onClick={() => handleCourseSelect(course)}
-                                className={`w-full text-left p-2.5 rounded-lg border transition-all duration-200 group relative ${isSelected
+                                className={`w-full text-left p-2 rounded-lg border transition-all duration-200 group relative ${isSelected
                                     ? 'bg-indigo-600/90 border-indigo-500 shadow-md transform scale-[1.02]'
                                     : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-gray-400'
                                     }`}

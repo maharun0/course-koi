@@ -127,7 +127,7 @@ function CourseKoiApp() {
         onTabChange={setActiveTab}
       />
 
-      <main className="flex-1 p-4 h-screen flex flex-col overflow-hidden relative">
+      <main className="flex-1 p-2 h-screen flex flex-col overflow-hidden relative">
 
         {/* Header Region */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6 shrink-0 z-20 relative">

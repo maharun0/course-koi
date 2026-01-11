@@ -91,16 +91,16 @@ export default function FilterMenu({
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         {/* Search Bar */}
         <div className="relative flex-1 group">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FaSearch className="text-gray-400 group-focus-within:text-indigo-400 transition-colors" />
-          </div>
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search within table..."
-            className="block w-full pl-10 pr-10 py-2.5 rounded-xl border-none ring-1 ring-black/5 dark:ring-white/10 bg-white/50 dark:bg-black/20 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 backdrop-blur-sm shadow-sm transition-all"
+            className="block w-full pl-10 pr-10 py-2 rounded-xl border-none ring-1 ring-black/5 dark:ring-white/10 bg-white/50 dark:bg-black/20 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 backdrop-blur-sm shadow-sm transition-all"
           />
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FaSearch className="text-gray-400 group-focus-within:text-indigo-400 transition-colors" />
+          </div>
           {query && (
             <button
               onClick={() => setQuery('')}
@@ -116,7 +116,7 @@ export default function FilterMenu({
           <button
             ref={filterButtonRef}
             onClick={() => setShowFilterMenu(!showFilterMenu)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm ${showFilterMenu
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all shadow-sm ${showFilterMenu
               ? 'bg-indigo-600 text-white ring-2 ring-indigo-500 ring-offset-2 ring-offset-[#f8fafc] dark:ring-offset-[#0f172a]'
               : 'bg-white dark:bg-black/20 ring-1 ring-black/5 dark:ring-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'
               }`}
@@ -157,14 +157,14 @@ export default function FilterMenu({
 
       {/* Course Pills */}
       {uniqueCourses.length > 0 && (
-        <div className="flex flex-wrap gap-2 animate-fade-in">
+        <div className="flex flex-wrap gap-1.5 animate-fade-in">
           {uniqueCourses.map((courseCode) => {
             const isActive = selectedCourses.includes(courseCode);
             return (
               <button
                 key={courseCode}
                 onClick={() => toggleCourseFilter(courseCode)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 ${isActive
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 ${isActive
                   ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/25'
                   : 'bg-white/40 dark:bg-white/5 text-gray-600 dark:text-gray-400 border-black/5 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10'
                   }`}
