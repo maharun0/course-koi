@@ -1,15 +1,15 @@
 'use client';
 
-import Image from 'next/image';
-import { FaGithub, FaStar } from 'react-icons/fa';
-import Sidebar from '@/components/course-filter/Sidebar';
 import CourseTable from '@/components/course-filter/CourseTable';
 import FilterMenu from '@/components/course-filter/FilterMenu';
 import PriorityModal from '@/components/course-filter/PriorityModal';
+import Sidebar from '@/components/course-filter/Sidebar';
 import useCourseData from '@/hooks/useCourseData';
-import useSorting from '@/hooks/useSorting';
 import useFiltering from '@/hooks/useFiltering';
+import useSorting from '@/hooks/useSorting';
 import { CourseRow } from '@/types/course';
+import Image from 'next/image';
+import { FaGithub, FaStar } from 'react-icons/fa';
 
 export default function CourseFilterPage() {
   const {
@@ -89,9 +89,12 @@ export default function CourseFilterPage() {
       />
       <main className="flex-1 p-6 space-y-6 relative">
         <div className="flex items-center justify-center relative">
-          <div className="flex items-center">
-            <Image src="/course_koi.png" alt="Course Koi" width={64} height={64} className="rounded-full mr-4" />
-            <h1 className="text-5xl font-bold text-[#FBB949)">Course Koi?</h1>
+          <div className="flex flex-col items-center">
+            <div className="flex items-center">
+              <Image src="/course_koi.png" alt="Course Koi" width={64} height={64} className="rounded-full mr-4" />
+              <h1 className="text-5xl font-bold text-[#FBB949)">Course Koi?</h1>
+            </div>
+            <p className="text-sm text-gray-600 mt-2">Updated for course of Spring 2026</p>
           </div>
           <a
             href="https://github.com/maharun0/course-koi"
