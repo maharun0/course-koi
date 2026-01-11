@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { Dispatch, SetStateAction } from 'react';
 import { CourseRow } from '@/types/course';
+import { FaFilter, FaSearch, FaTimes } from 'react-icons/fa';
 
 interface FilterMenuProps {
   view: 'all' | 'starred';
@@ -13,9 +14,9 @@ interface FilterMenuProps {
   showFilterMenu: boolean;
   setShowFilterMenu: (value: boolean) => void;
   selectedAllCourses: string[];
-  setSelectedAllCourses: Dispatch<SetStateAction<string[]>>; // Updated type
+  setSelectedAllCourses: Dispatch<SetStateAction<string[]>>;
   selectedStarredCourses: string[];
-  setSelectedStarredCourses: Dispatch<SetStateAction<string[]>>; // Updated type
+  setSelectedStarredCourses: Dispatch<SetStateAction<string[]>>;
   savedCourses: CourseRow[];
   starredCourses: CourseRow[];
 }
@@ -66,13 +67,6 @@ export default function FilterMenu({
     );
   };
 
-  const handleFilterMenuClose = () => {
-    if (filterColumns.length === 0) {
-      setFilterColumns(['courseCode', 'facultyCode', 'room']);
-    }
-    setShowFilterMenu(false);
-  };
-
   const toggleAllCourseFilter = (courseCode: string) => {
     setSelectedAllCourses((prev: string[]) =>
       prev.includes(courseCode) ? prev.filter((code) => code !== courseCode) : [...prev, courseCode]
@@ -85,110 +79,103 @@ export default function FilterMenu({
     );
   };
 
+  const uniqueCourses = Array.from(
+    new Set((view === 'all' ? savedCourses : starredCourses).map((c) => c.courseCode))
+  ).sort();
+
+  const selectedCourses = view === 'all' ? selectedAllCourses : selectedStarredCourses;
+  const toggleCourseFilter = view === 'all' ? toggleAllCourseFilter : toggleStarredCourseFilter;
+
   return (
-    <>
-      <div className="flex justify-center mb-6 items-center space-x-4">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by course code, faculty code, or room number…"
-          className="w-full max-w-lg border rounded p-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring focus:ring-indigo-500/40"
-        />
+    <div className="space-y-4 mb-6">
+      <div className="flex flex-col md:flex-row md:items-center gap-4">
+        {/* Search Bar */}
+        <div className="relative flex-1 group">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search within table..."
+            className="block w-full pl-10 pr-10 py-2 rounded-xl border-none ring-1 ring-black/5 dark:ring-white/10 bg-white/50 dark:bg-black/20 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 backdrop-blur-sm shadow-sm transition-all"
+          />
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FaSearch className="text-gray-400 group-focus-within:text-indigo-400 transition-colors" />
+          </div>
+          {query && (
+            <button
+              onClick={() => setQuery('')}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            >
+              <FaTimes />
+            </button>
+          )}
+        </div>
+
+        {/* Filter Toggle */}
         <div className="relative">
           <button
             ref={filterButtonRef}
             onClick={() => setShowFilterMenu(!showFilterMenu)}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded cursor-pointer"
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all shadow-sm ${showFilterMenu
+              ? 'bg-indigo-600 text-white ring-2 ring-indigo-500 ring-offset-2 ring-offset-[#f8fafc] dark:ring-offset-[#0f172a]'
+              : 'bg-white dark:bg-black/20 ring-1 ring-black/5 dark:ring-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'
+              }`}
           >
-            Filter by
+            <FaFilter className={showFilterMenu ? 'text-white' : 'text-gray-400'} />
+            Columns
           </button>
+
           {showFilterMenu && (
             <div
               ref={filterMenuRef}
-              className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-10"
+              className="absolute right-0 mt-2 w-56 glass rounded-xl shadow-2xl z-20 overflow-hidden"
             >
-              <div className="p-2">
-                {['courseCode', 'facultyCode', 'room', 'section', 'time'].map((col) => (
-                  <label key={col} className="flex items-center space-x-2 p-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={filterColumns.includes(col)}
-                      onChange={() => toggleFilterColumn(col)}
-                      className="form-checkbox h-4 w-4 text-indigo-600"
-                    />
-                    <span className="text-sm capitalize">
-                      {col === 'courseCode' ? 'Course' : col === 'facultyCode' ? 'Faculty' : col}
-                    </span>
-                  </label>
-                ))}
+              <div className="px-4 py-3 border-b border-white/10">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Visible Columns</h3>
               </div>
-              <div className="p-2 border-t border-gray-200 dark:border-gray-700">
-                <button
-                  onClick={handleFilterMenuClose}
-                  className="w-full text-center px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
-                >
-                  Close
-                </button>
+              <div className="p-2 space-y-1">
+                {['courseCode', 'facultyCode', 'room', 'section', 'time'].map((col) => {
+                  const label = col === 'courseCode' ? 'Course' : col === 'facultyCode' ? 'Faculty' : col.charAt(0).toUpperCase() + col.slice(1);
+                  const isSelected = filterColumns.includes(col);
+                  return (
+                    <button
+                      key={col}
+                      onClick={() => toggleFilterColumn(col)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${isSelected ? 'bg-indigo-500/20 text-indigo-300' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                        }`}
+                    >
+                      <span>{label}</span>
+                      {isSelected && <span className="w-2 h-2 rounded-full bg-indigo-400 shadow-lg shadow-indigo-500/50"></span>}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
         </div>
       </div>
-      {view === 'all' && savedCourses.length > 0 && (
-        <div className="mb-4">
-          <div className="flex flex-wrap gap-2 justify-center">
-            {Array.from(new Set(savedCourses.map((c) => c.courseCode)))
-              .sort()
-              .map((courseCode) => (
-                <button
-                  key={courseCode}
-                  onClick={() => toggleAllCourseFilter(courseCode)}
-                  className={`px-2 py-1 text-xs rounded border ${
-                    selectedAllCourses.includes(courseCode)
-                      ? 'bg-gray-600 text-white border-gray-600'
-                      : 'bg-gray-200 dark:bg-gray-900 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600'
-                  } flex items-center cursor-pointer`}
-                >
-                  {courseCode}
-                  {selectedAllCourses.includes(courseCode) && (
-                    <span className="ml-1 inline-flex items-center">✕</span>
-                  )}
-                </button>
-              ))}
-          </div>
+
+      {/* Course Pills */}
+      {uniqueCourses.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 animate-fade-in">
+          {uniqueCourses.map((courseCode) => {
+            const isActive = selectedCourses.includes(courseCode);
+            return (
+              <button
+                key={courseCode}
+                onClick={() => toggleCourseFilter(courseCode)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 ${isActive
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/25'
+                  : 'bg-white/40 dark:bg-white/5 text-gray-600 dark:text-gray-400 border-black/5 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10'
+                  }`}
+              >
+                {courseCode}
+                {isActive && <FaTimes className="text-[10px] opacity-70" />}
+              </button>
+            );
+          })}
         </div>
       )}
-      {view === 'starred' && starredCourses.length > 0 && (
-        <div className="mb-4">
-          <div className="flex flex-wrap gap-2 justify-center">
-            {Array.from(new Set(starredCourses.map((c) => c.courseCode)))
-              .sort()
-              .map((courseCode) => (
-                <button
-                  key={courseCode}
-                  onClick={() => toggleStarredCourseFilter(courseCode)}
-                  className={`px-2 py-1 text-xs rounded border ${
-                    selectedStarredCourses.includes(courseCode)
-                      ? 'bg-gray-600 text-white border-gray-600'
-                      : 'bg-gray-200 dark:bg-gray-900 text-gray-800 dark:text-gray-200 border-gray-300 dark:border-gray-600'
-                  } flex items-center cursor-pointer`}
-                >
-                  {courseCode}
-                  {selectedStarredCourses.includes(courseCode) && (
-                    <span className="ml-1 inline-flex items-center">✕</span>
-                  )}
-                </button>
-              ))}
-          </div>
-        </div>
-      )}
-      <div className="text-xs text-center text-gray-500 dark:text-gray-400 mb-3">
-        <p>
-          Set priority values to rank sections. Click column headers to sort. Click again to toggle
-          ascending/descending/turn off sorting.
-        </p>
-      </div>
-    </>
+    </div>
   );
 }

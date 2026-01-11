@@ -37,12 +37,12 @@ export default function useCourseData() {
 
   const courseOptions = useMemo(() => Array.from(new Set(rows.map((r) => r.courseCode))).sort(), [rows]);
 
-  const addCourse = () => {
-    const upperCaseCourse = inputCourse.toUpperCase().trim();
-    const courseToAdd = rows.find((r) => r.courseCode.toUpperCase() === upperCaseCourse);
+  const addCourse = (code?: string) => {
+    const courseToFind = code ? code.toUpperCase().trim() : inputCourse.toUpperCase().trim();
+    const courseToAdd = rows.find((r) => r.courseCode.toUpperCase() === courseToFind);
     if (courseToAdd && !savedCourses.some((saved) => saved.courseCode === courseToAdd.courseCode)) {
       setSavedCourses([...savedCourses, courseToAdd]);
-      setInputCourse('');
+      if (!code) setInputCourse('');
       setShowDialog('added');
       setTimeout(() => setShowDialog(null), 3000);
     } else {
