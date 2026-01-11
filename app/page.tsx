@@ -147,16 +147,25 @@ function CourseKoiApp() {
 
           <div className="flex items-center gap-4">
             {/* View Toggles */}
-            <div className="glass p-1 rounded-lg flex items-center">
+            <div className="glass p-1 rounded-lg flex items-center relative w-[240px]">
+              {/* Sliding Background */}
+              <div
+                className={`absolute top-1 bottom-1 rounded-md bg-indigo-600 shadow-lg transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] z-0`}
+                style={{
+                  left: activeTab === 'list' ? '4px' : '50%',
+                  width: 'calc(50% - 4px)'
+                }}
+              />
+
               <button
                 onClick={() => setActiveTab('list')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'list' ? 'bg-indigo-600 shadow-lg text-white' : 'text-gray-400 hover:text-white'}`}
+                className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative z-10 flex items-center justify-center gap-2 ${activeTab === 'list' ? 'text-white' : 'text-gray-400 hover:text-white'}`}
               >
                 <FaList /> List
               </button>
               <button
                 onClick={() => setActiveTab('schedule')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'schedule' ? 'bg-indigo-600 shadow-lg text-white' : 'text-gray-400 hover:text-white'}`}
+                className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative z-10 flex items-center justify-center gap-2 ${activeTab === 'schedule' ? 'text-white' : 'text-gray-400 hover:text-white'}`}
               >
                 <FaCalendarAlt /> Schedule
               </button>
@@ -177,38 +186,40 @@ function CourseKoiApp() {
 
         {/* Main Content Area */}
         <div className="animate-fade-in-up">
-          {activeTab === 'list' ? (
-            <>
-              <FilterMenu
-                view={view}
-                query={view === 'all' ? query : starredQuery}
-                setQuery={view === 'all' ? setQuery : setStarredQuery}
-                filterColumns={filterColumns}
-                setFilterColumns={setFilterColumns}
-                showFilterMenu={showFilterMenu}
-                setShowFilterMenu={setShowFilterMenu}
-                selectedAllCourses={selectedAllCourses}
-                setSelectedAllCourses={setSelectedAllCourses}
-                selectedStarredCourses={selectedStarredCourses}
-                setSelectedStarredCourses={setSelectedStarredCourses}
-                savedCourses={savedCourses}
-                starredCourses={starredCourses}
-              />
-              <CourseTable
-                sortedData={view === 'all' ? sortedData : starredSortedData}
-                sorts={sorts}
-                toggleSort={toggleSort}
-                toggleStar={toggleStar}
-                changePriority={changePriority}
-                starredCourses={starredCourses}
-              />
-            </>
-          ) : (
+          {/* List View */}
+          <div style={{ display: activeTab === 'list' ? 'block' : 'none' }}>
+            <FilterMenu
+              view={view}
+              query={view === 'all' ? query : starredQuery}
+              setQuery={view === 'all' ? setQuery : setStarredQuery}
+              filterColumns={filterColumns}
+              setFilterColumns={setFilterColumns}
+              showFilterMenu={showFilterMenu}
+              setShowFilterMenu={setShowFilterMenu}
+              selectedAllCourses={selectedAllCourses}
+              setSelectedAllCourses={setSelectedAllCourses}
+              selectedStarredCourses={selectedStarredCourses}
+              setSelectedStarredCourses={setSelectedStarredCourses}
+              savedCourses={savedCourses}
+              starredCourses={starredCourses}
+            />
+            <CourseTable
+              sortedData={view === 'all' ? sortedData : starredSortedData}
+              sorts={sorts}
+              toggleSort={toggleSort}
+              toggleStar={toggleStar}
+              changePriority={changePriority}
+              starredCourses={starredCourses}
+            />
+          </div>
+
+          {/* Schedule View */}
+          <div style={{ display: activeTab === 'schedule' ? 'block' : 'none' }}>
             <div className="w-full">
               <p className="text-gray-400 mb-4 px-2">Select from your <strong>Starred</strong> courses to build your weekly schedule.</p>
               <ScheduleView courses={starredCourses} />
             </div>
-          )}
+          </div>
         </div>
 
       </main>
