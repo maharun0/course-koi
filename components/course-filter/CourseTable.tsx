@@ -93,7 +93,7 @@ export default function CourseTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {sortedData.map((r, idx) => {
+              {sortedData.slice(0, 100).map((r, idx) => {
                 const isStarred = starredCourses.some((c) => c.id === r.id);
                 return (
                   <tr key={r.id} className="hover:bg-white/5 transition-colors group">
@@ -145,6 +145,13 @@ export default function CourseTable({
                   </tr>
                 )
               })}
+              {sortedData.length > 100 && (
+                <tr>
+                  <td colSpan={8} className="px-6 py-4 text-center text-xs text-gray-500 italic border-t border-white/5">
+                    Showing first 100 of {sortedData.length} courses. Use search/filters to find specific items.
+                  </td>
+                </tr>
+              )}
               {sortedData.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
