@@ -93,17 +93,20 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
         }
     };
 
-    // --- MAPPING LOGIC ---
-    // Map selected courses to grid cells
-    const gridData = useMemo(() => {
-        const grid: Record<string, { course: CourseRow; color: string }[]> = {};
+    // --- POSITIONING LOGIC ---
+    const START_OF_DAY = 8 * 60; // 08:00 AM
+    const END_OF_DAY = 19 * 60 + 30; // 07:30 PM (End of last slot)
+    const TOTAL_MINS = END_OF_DAY - START_OF_DAY;
 
-        // Initialize grid
-        DAYS.forEach(d => {
-            for (let i = 0; i < TIME_SLOTS.length; i++) {
-                grid[`${d}-${i}`] = [];
-            }
-        });
+    const getPosition = (start: number, end: number) => {
+        const top = ((start - START_OF_DAY) / TOTAL_MINS) * 100;
+        const height = ((end - start) / TOTAL_MINS) * 100;
+        return { top: `${top}%`, height: `${height}%` };
+    };
+
+    const daySchedules = useMemo(() => {
+        const temp: Record<string, { course: CourseRow; color: string; style: { top: string; height: string } }[]> = {};
+        DAYS.forEach(d => (temp[d] = []));
 
         const colors = [
             'bg-blue-600', 'bg-purple-600', 'bg-pink-600',
@@ -115,23 +118,18 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
             if (!schedule) return;
 
             schedule.slots.forEach(slot => {
-                // Find matching time slot (fuzzy match +/- 15 mins)
-                const slotIndex = TIME_SLOTS.findIndex(ts =>
-                    Math.abs(ts.start - slot.start) < 30 // 30 min tolerance
-                );
-
-                if (slotIndex !== -1) {
-                    const key = `${slot.day}-${slotIndex}`;
-                    if (!grid[key]) grid[key] = []; // Safety init
-                    grid[key].push({
+                const { top, height } = getPosition(slot.start, slot.end);
+                // Clamp or check if out of bounds? User said "over border is fine".
+                if (temp[slot.day]) {
+                    temp[slot.day].push({
                         course,
-                        color: colors[idx % colors.length]
+                        color: colors[idx % colors.length],
+                        style: { top, height }
                     });
                 }
             });
         });
-
-        return grid;
+        return temp;
     }, [selectedCourses]);
 
     // --- ACTIONS ---
@@ -198,44 +196,70 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
 
                 {/* The Grid Container - Capture Target */}
                 <div ref={scheduleRef} className="p-4 bg-[#0f172a] rounded-lg border border-white/5 w-full h-full flex flex-col">
-                    <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] grid-rows-[auto_repeat(7,1fr)] bg-white/5 rounded-lg overflow-hidden border border-white/10 h-full">
-                        {/* Header Row */}
-                        <div className="bg-black/20 p-2 border-r border-b border-white/10 text-center font-bold text-gray-400 text-xs uppercase tracking-wider flex items-center justify-center">
-                            Time
-                        </div>
-                        {DAYS.map(day => (
-                            <div key={day} className="bg-black/20 p-2 border-r border-b border-white/10 text-center font-bold text-gray-200 last:border-r-0 flex items-center justify-center">
-                                {day}
-                            </div>
-                        ))}
+                    <div className="flex-1 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-white/5 rounded-lg overflow-hidden border border-white/10 h-full relative">
 
-                        {/* Slots Rows */}
-                        {TIME_SLOTS.map((slot, slotIdx) => (
-                            <>
-                                {/* Time Label Cell */}
-                                <div key={`time-${slotIdx}`} className="bg-black/10 p-1 border-r border-b border-white/10 flex flex-col justify-center items-center text-[10px] text-gray-400 font-mono text-center leading-tight">
-                                    <span className="block font-semibold">{slot.label}</span>
-                                </div>
+                        {/* 1. Time Column */}
+                        <div className="relative h-full border-r border-white/10 bg-black/20">
+                            {/* Header */}
+                            <div className="h-8 border-b border-white/10 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-black/10 absolute w-full top-0 z-10">Time</div>
 
-                                {/* Day Cells */}
-                                {DAYS.map(day => {
-                                    const cellData = gridData[`${day}-${slotIdx}`];
+                            {/* Time Labels */}
+                            <div className="absolute top-8 bottom-0 w-full">
+                                {TIME_SLOTS.map((slot, i) => {
+                                    const { top } = getPosition(slot.start, 0); // Height doesn't matter for label pos
                                     return (
-                                        <div key={`${day}-${slotIdx}`} className="border-r border-b border-white/5 bg-transparent p-1 relative last:border-r-0">
-                                            {cellData && cellData.map((item, i) => (
-                                                <div
-                                                    key={i}
-                                                    className={`${item.color} w-full h-full rounded shadow-lg p-1 text-xs text-white border border-white/10 flex flex-col justify-center items-center hover:scale-[1.02] transition-transform cursor-default group overflow-hidden`}
-                                                >
-                                                    <div className="font-bold leading-tight text-center truncate w-full">{item.course.courseCode}</div>
-                                                    <div className="text-[9px] opacity-80 text-center truncate w-full">Sec {item.course.section}</div>
-                                                    <div className="hidden sm:block text-[8px] opacity-60 text-center uppercase tracking-wide group-hover:opacity-100 transition-opacity truncate w-full">{item.course.room}</div>
-                                                </div>
-                                            ))}
+                                        <div
+                                            key={i}
+                                            className="absolute w-full text-right pr-2 text-[10px] text-gray-400 font-mono -translate-y-1/2 flex items-center justify-end"
+                                            style={{ top }}
+                                        >
+                                            <span className="bg-[#0f172a]/80 px-1 rounded">{slot.label}</span>
                                         </div>
                                     );
                                 })}
-                            </>
+                            </div>
+                        </div>
+
+                        {/* 2. Day Columns */}
+                        {DAYS.map(day => (
+                            <div key={day} className="relative h-full border-r border-white/10 last:border-r-0">
+                                {/* Header */}
+                                <div className="h-8 border-b border-white/10 flex items-center justify-center text-xs font-bold text-gray-200 bg-black/20 absolute w-full top-0 z-10">
+                                    {day}
+                                </div>
+
+                                {/* Content Area */}
+                                <div className="absolute top-8 bottom-0 w-full">
+                                    {/* Background Grid Lines */}
+                                    {TIME_SLOTS.map((slot, i) => {
+                                        const { top } = getPosition(slot.start, 0);
+                                        return (
+                                            <div
+                                                key={`line-${i}`}
+                                                className="absolute w-full border-t border-white/5 pointer-events-none"
+                                                style={{ top }}
+                                            />
+                                        );
+                                    })}
+
+                                    {/* Courses */}
+                                    {daySchedules[day]?.map((item, i) => (
+                                        <div
+                                            key={i}
+                                            className={`absolute inset-x-0 mx-0.5 rounded shadow-lg p-1 text-xs text-white border border-white/10 flex flex-col justify-center items-center hover:scale-[1.02] hover:z-20 transition-all cursor-default group overflow-hidden ${item.color}`}
+                                            style={{
+                                                top: item.style.top,
+                                                height: item.style.height,
+                                                minHeight: '20px' // Ensure visibility for short blocks
+                                            }}
+                                        >
+                                            <div className="font-bold leading-tight text-center truncate w-full">{item.course.courseCode}</div>
+                                            <div className="text-[9px] opacity-80 text-center truncate w-full">Sec {item.course.section}</div>
+                                            <div className="hidden sm:block text-[8px] opacity-60 text-center uppercase tracking-wide group-hover:opacity-100 transition-opacity truncate w-full">{item.course.room}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         ))}
                     </div>
 
