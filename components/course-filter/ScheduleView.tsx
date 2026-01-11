@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { CourseRow } from '@/types/course';
 import { parseCourseTime } from '@/utils/timeUtils';
 import { FaCopy, FaDownload, FaCheck, FaTimes } from 'react-icons/fa';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 
 interface ScheduleViewProps {
     courses: CourseRow[];
@@ -169,14 +169,10 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
     const downloadImage = async () => {
         if (!scheduleRef.current) return;
         try {
-            const canvas = await html2canvas(scheduleRef.current, {
-                scale: 2,
-                backgroundColor: '#0f172a',
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            } as any);
+            const dataUrl = await toPng(scheduleRef.current, { cacheBust: true, backgroundColor: '#0f172a' });
             const link = document.createElement('a');
             link.download = 'my-schedule.png';
-            link.href = canvas.toDataURL();
+            link.href = dataUrl;
             link.click();
             setNotification({ message: "Schedule downloaded!", type: "success" });
         } catch (e) {

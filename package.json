@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "next": "15.3.6",
     "papaparse": "^5.5.2",
