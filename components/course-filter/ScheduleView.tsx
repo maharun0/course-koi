@@ -27,6 +27,27 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
     const [selectedCourses, setSelectedCourses] = useState<CourseRow[]>([]);
     const [notification, setNotification] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
     const scheduleRef = useRef<HTMLDivElement>(null);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    // Load from LocalStorage
+    useEffect(() => {
+        const saved = localStorage.getItem('courseKoi_schedule');
+        if (saved) {
+            try {
+                setSelectedCourses(JSON.parse(saved));
+            } catch (e) {
+                console.error("Failed to load schedule", e);
+            }
+        }
+        setIsLoaded(true);
+    }, []);
+
+    // Save to LocalStorage
+    useEffect(() => {
+        if (isLoaded) {
+            localStorage.setItem('courseKoi_schedule', JSON.stringify(selectedCourses));
+        }
+    }, [selectedCourses, isLoaded]);
 
     // Auto-dismiss notification
     useEffect(() => {
