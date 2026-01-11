@@ -1,4 +1,4 @@
-NOTE: Website is deployed at https://coursekoi.vercel.app/
+NOTE: Website is deployed at https://course-koi.vercel.app/
 Updated for NSU Spring 2026 Courses
 
 # Course Koi
