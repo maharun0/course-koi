@@ -7,7 +7,6 @@ import FilterMenu from '@/components/course-filter/FilterMenu';
 import PriorityModal from '@/components/course-filter/PriorityModal';
 import Sidebar from '@/components/course-filter/Sidebar';
 import ScheduleView from '@/components/course-filter/ScheduleView';
-import ConflictWarning from '@/components/course-filter/ConflictWarning';
 import useCourseData from '@/hooks/useCourseData';
 import useFiltering from '@/hooks/useFiltering';
 import useSorting from '@/hooks/useSorting';
@@ -127,11 +126,10 @@ function CourseKoiApp() {
         setCoursePriorities={setCoursePriorities}
       />
 
-      <main className="flex-1 p-4 h-screen overflow-y-auto custom-scrollbar relative">
-        <ConflictWarning selectedCourses={starredCourses} />
+      <main className="flex-1 p-4 h-screen flex flex-col overflow-hidden relative">
 
         {/* Header Region */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6 shrink-0 z-20 relative">
           <div className="flex items-center gap-4 animate-fade-in-down">
             <div className="relative group cursor-pointer">
               <div className="absolute inset-0 bg-indigo-500 rounded-full blur opacity-40 group-hover:opacity-60 transition-opacity"></div>
@@ -185,38 +183,50 @@ function CourseKoiApp() {
         </div>
 
         {/* Main Content Area */}
-        <div className="animate-fade-in-up">
+        <div className="relative flex-1 w-full isolate">
           {/* List View */}
-          <div style={{ display: activeTab === 'list' ? 'block' : 'none' }}>
-            <FilterMenu
-              view={view}
-              query={view === 'all' ? query : starredQuery}
-              setQuery={view === 'all' ? setQuery : setStarredQuery}
-              filterColumns={filterColumns}
-              setFilterColumns={setFilterColumns}
-              showFilterMenu={showFilterMenu}
-              setShowFilterMenu={setShowFilterMenu}
-              selectedAllCourses={selectedAllCourses}
-              setSelectedAllCourses={setSelectedAllCourses}
-              selectedStarredCourses={selectedStarredCourses}
-              setSelectedStarredCourses={setSelectedStarredCourses}
-              savedCourses={savedCourses}
-              starredCourses={starredCourses}
-            />
-            <CourseTable
-              sortedData={view === 'all' ? sortedData : starredSortedData}
-              sorts={sorts}
-              toggleSort={toggleSort}
-              toggleStar={toggleStar}
-              changePriority={changePriority}
-              starredCourses={starredCourses}
-            />
+          <div
+            className={`absolute inset-0 w-full h-full overflow-y-auto custom-scrollbar transition-all duration-300 ease-in-out ${activeTab === 'list'
+              ? 'opacity-100 translate-x-0 z-10'
+              : 'opacity-0 -translate-x-4 z-0 pointer-events-none'
+              }`}
+          >
+            <div className="pb-4"> {/* Padding bottom for scroll content */}
+              <FilterMenu
+                view={view}
+                query={view === 'all' ? query : starredQuery}
+                setQuery={view === 'all' ? setQuery : setStarredQuery}
+                filterColumns={filterColumns}
+                setFilterColumns={setFilterColumns}
+                showFilterMenu={showFilterMenu}
+                setShowFilterMenu={setShowFilterMenu}
+                selectedAllCourses={selectedAllCourses}
+                setSelectedAllCourses={setSelectedAllCourses}
+                selectedStarredCourses={selectedStarredCourses}
+                setSelectedStarredCourses={setSelectedStarredCourses}
+                savedCourses={savedCourses}
+                starredCourses={starredCourses}
+              />
+              <CourseTable
+                sortedData={view === 'all' ? sortedData : starredSortedData}
+                sorts={sorts}
+                toggleSort={toggleSort}
+                toggleStar={toggleStar}
+                changePriority={changePriority}
+                starredCourses={starredCourses}
+              />
+            </div>
           </div>
 
           {/* Schedule View */}
-          <div style={{ display: activeTab === 'schedule' ? 'block' : 'none' }}>
-            <div className="w-full">
-              <p className="text-gray-400 mb-4 px-2">Select from your <strong>Starred</strong> courses to build your weekly schedule.</p>
+          <div
+            className={`absolute inset-0 w-full h-full overflow-hidden transition-all duration-300 ease-in-out ${activeTab === 'schedule'
+              ? 'opacity-100 translate-x-0 z-10'
+              : 'opacity-0 translate-x-4 z-0 pointer-events-none'
+              }`}
+          >
+            <div className="w-full h-full">
+              <p className="text-gray-400 mb-4 px-2 hidden">Select from your <strong>Starred</strong> courses to build your weekly schedule.</p>
               <ScheduleView courses={starredCourses} />
             </div>
           </div>

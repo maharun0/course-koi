@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { CourseRow } from '@/types/course';
 import { parseCourseTime } from '@/utils/timeUtils';
-import { FaCopy, FaDownload, FaCheck } from 'react-icons/fa';
+import { FaCopy, FaDownload, FaCheck, FaTimes } from 'react-icons/fa';
 import html2canvas from 'html2canvas';
 
 interface ScheduleViewProps {
@@ -167,12 +167,18 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
     };
 
     return (
-        <div className="flex flex-col lg:flex-row gap-4 w-full h-[calc(100vh-180px)]">
+        <div className="flex flex-col lg:flex-row gap-4 w-full h-full">
             {/* Toast Notification */}
             {notification && (
-                <div className={`fixed top-4 right-4 z-[100] px-4 py-2 rounded-lg shadow-xl text-white animate-fade-in-down flex items-center gap-2 ${notification.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
+                <div className={`fixed top-4 right-4 z-[100] px-4 py-3 rounded-lg shadow-xl text-white animate-fade-in-down flex items-center gap-3 pr-8 ${notification.type === 'error' ? 'bg-red-500/90 backdrop-blur' : 'bg-green-500/90 backdrop-blur'}`}>
                     {notification.type === 'success' && <FaCheck />}
-                    {notification.message}
+                    <span className="font-medium text-sm">{notification.message}</span>
+                    <button
+                        onClick={() => setNotification(null)}
+                        className="absolute top-2 right-2 p-1 hover:bg-white/20 rounded-full transition-colors"
+                    >
+                        <FaTimes size={12} />
+                    </button>
                 </div>
             )}
 
@@ -192,7 +198,7 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
 
                 {/* The Grid Container - Capture Target */}
                 <div ref={scheduleRef} className="p-4 bg-[#0f172a] rounded-lg border border-white/5 w-full h-full flex flex-col">
-                    <div className="grid grid-cols-[80px_repeat(7,1fr)] grid-rows-[auto_repeat(7,1fr)] bg-white/5 rounded-lg overflow-hidden border border-white/10 h-full">
+                    <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] grid-rows-[auto_repeat(7,1fr)] bg-white/5 rounded-lg overflow-hidden border border-white/10 h-full">
                         {/* Header Row */}
                         <div className="bg-black/20 p-2 border-r border-b border-white/10 text-center font-bold text-gray-400 text-xs uppercase tracking-wider flex items-center justify-center">
                             Time
