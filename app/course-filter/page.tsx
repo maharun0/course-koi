@@ -178,7 +178,7 @@ export default function CourseFilterPage() {
             </>
           ) : (
             <div className="w-full">
-              <p className="text-gray-400 mb-4 px-2">Visualizing your <strong>Starred</strong> courses.</p>
+              <p className="text-gray-400 mb-4 px-2">Select from your <strong>Starred</strong> courses to build your weekly schedule.</p>
               <ScheduleView courses={starredCourses} />
             </div>
           )}
