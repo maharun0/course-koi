@@ -102,6 +102,26 @@ export default function Sidebar({
           {!isCollapsed && <h2 className="text-lg font-bold text-white tracking-wide">Courses</h2>}
         </div>
 
+        {/* All Courses Button (Primary Action) */}
+        <div>
+          <button
+            onClick={() => {
+              setView('all');
+              setActiveCourse(null);
+            }}
+            className={`w-full text-left p-2 flex items-center gap-3 cursor-pointer rounded-xl transition-all duration-200 group border ${activeCourse === null && view === 'all'
+              ? 'bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-500/20'
+              : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+              } ${isCollapsed ? 'justify-center' : ''}`}
+            title="All Courses"
+          >
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${activeCourse === null && view === 'all' ? 'bg-white/20' : 'bg-indigo-500/20 text-indigo-300'}`}>
+              <FaLayerGroup size={14} />
+            </div>
+            {!isCollapsed && <span className="font-bold text-sm text-gray-100">All Courses</span>}
+          </button>
+        </div>
+
         {/* Section 1: My Courses (Top) */}
         <div className="flex-1 flex flex-col overflow-hidden min-h-0 bg-white/5 rounded-xl border border-white/5">
           {!isCollapsed && (
@@ -112,7 +132,7 @@ export default function Sidebar({
           <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
             {savedCourses.length === 0 && !isCollapsed && (
               <div className="text-center p-4 text-gray-500 text-xs italic">
-                Your list is empty.
+                Add courses to see them here.
               </div>
             )}
             {savedCourses.map((c) => (

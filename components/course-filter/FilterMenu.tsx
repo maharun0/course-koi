@@ -99,8 +99,16 @@ export default function FilterMenu({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search within table..."
-            className="block w-full pl-10 pr-3 py-2.5 rounded-xl border-none ring-1 ring-black/5 dark:ring-white/10 bg-white/50 dark:bg-black/20 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 backdrop-blur-sm shadow-sm transition-all"
+            className="block w-full pl-10 pr-10 py-2.5 rounded-xl border-none ring-1 ring-black/5 dark:ring-white/10 bg-white/50 dark:bg-black/20 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 backdrop-blur-sm shadow-sm transition-all"
           />
+          {query && (
+            <button
+              onClick={() => setQuery('')}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            >
+              <FaTimes />
+            </button>
+          )}
         </div>
 
         {/* Filter Toggle */}
@@ -109,8 +117,8 @@ export default function FilterMenu({
             ref={filterButtonRef}
             onClick={() => setShowFilterMenu(!showFilterMenu)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm ${showFilterMenu
-                ? 'bg-indigo-600 text-white ring-2 ring-indigo-500 ring-offset-2 ring-offset-[#f8fafc] dark:ring-offset-[#0f172a]'
-                : 'bg-white dark:bg-black/20 ring-1 ring-black/5 dark:ring-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'
+              ? 'bg-indigo-600 text-white ring-2 ring-indigo-500 ring-offset-2 ring-offset-[#f8fafc] dark:ring-offset-[#0f172a]'
+              : 'bg-white dark:bg-black/20 ring-1 ring-black/5 dark:ring-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'
               }`}
           >
             <FaFilter className={showFilterMenu ? 'text-white' : 'text-gray-400'} />
@@ -157,8 +165,8 @@ export default function FilterMenu({
                 key={courseCode}
                 onClick={() => toggleCourseFilter(courseCode)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 ${isActive
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/25'
-                    : 'bg-white/40 dark:bg-white/5 text-gray-600 dark:text-gray-400 border-black/5 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10'
+                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/25'
+                  : 'bg-white/40 dark:bg-white/5 text-gray-600 dark:text-gray-400 border-black/5 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10'
                   }`}
               >
                 {courseCode}
