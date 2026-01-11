@@ -12,13 +12,13 @@ export interface ParsedSchedule {
 }
 
 const DaysMap: Record<string, string> = {
-  Mo: 'Mon',
-  Tu: 'Tue',
-  We: 'Wed',
-  Th: 'Thu',
-  Fr: 'Fri',
-  Sa: 'Sat',
-  Su: 'Sun',
+  M: 'Mon',
+  T: 'Tue',
+  W: 'Wed',
+  R: 'Thu',
+  F: 'Fri',
+  A: 'Sat',
+  S: 'Sun',
 };
 
 // Map full day names to 0-6 index for fullcalendar or similar if needed
@@ -33,34 +33,52 @@ export const DayToIndex: Record<string, number> = {
 };
 
 /**
- * Parses a time string like "MoWe 10:00-11:30" into a structured format.
- * Handles multiple days and time ranges.
- * Assumes format: "DayDay... HH:MM-HH:MM"
+ * Parses a time string like "MW 10:00 AM - 11:30 AM" into a structured format.
+ * Handles multiple days and time ranges with AM/PM.
+ * Assumes format: "[Days] [Start Time] - [End Time]"
  */
 export function parseCourseTime(timeStr: string, courseId: string, courseCode: string, section: string): ParsedSchedule | null {
   if (!timeStr || timeStr === 'TBA') return null;
 
   try {
-    const [daysPart, timeRange] = timeStr.split(' ');
-    if (!daysPart || !timeRange) return null;
+    // 1. Separate Days part from Time Range part
+    // Regex matches the first digit to split days from time
+    // e.g. "TR 08:00 AM - 09:30 AM"
+    const match = timeStr.match(/^([A-Z]+)\s+(.*)$/);
+    if (!match) return null;
+
+    const daysPart = match[1];
+    const timeRange = match[2];
 
     const days: string[] = [];
-    // Split day string every 2 chars (e.g., "MoWe" -> ["Mo", "We"])
-    for (let i = 0; i < daysPart.length; i += 2) {
-      const d = daysPart.substring(i, i + 2);
-      if (DaysMap[d]) {
-        days.push(DaysMap[d]);
+    // Iterate 1 char at a time
+    for (const char of daysPart) {
+      if (DaysMap[char]) {
+        days.push(DaysMap[char]);
       }
     }
 
-    const [startStr, endStr] = timeRange.split('-');
+    // 2. Parse Start and End Times including AM/PM
+    const [startStr, endStr] = timeRange.split('-').map(s => s.trim());
+
     const parseTime = (t: string) => {
-      const [h, m] = t.split(':').map(Number);
+      // t is like "08:00 AM" or "02:30 PM"
+      const [time, modifier] = t.split(' ');
+      let [h, m] = time.split(':').map(Number);
+
+      if (modifier === 'PM' && h !== 12) {
+        h += 12;
+      }
+      if (modifier === 'AM' && h === 12) {
+        h = 0;
+      }
+
       return h * 60 + m;
     };
 
     const start = parseTime(startStr);
     const end = parseTime(endStr);
+
 
     const slots: TimeSlot[] = days.map((day) => ({
       day,
@@ -98,7 +116,7 @@ export function detectConflicts(schedules: ParsedSchedule[]): string[] {
           if (slot1.day === slot2.day) {
             // Check overlaps
             if (Math.max(slot1.start, slot2.start) < Math.min(slot1.end, slot2.end)) {
-                 conflicts.push(`${s1.courseCode} (Sec ${s1.section}) conflicts with ${s2.courseCode} (Sec ${s2.section}) on ${slot1.day}`);
+              conflicts.push(`${s1.courseCode} (Sec ${s1.section}) conflicts with ${s2.courseCode} (Sec ${s2.section}) on ${slot1.day}`);
             }
           }
         }
