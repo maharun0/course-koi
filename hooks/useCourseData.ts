@@ -11,7 +11,7 @@ export default function useCourseData() {
   const [showDialog, setShowDialog] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/courses_pdf.csv')
+    fetch('/courses.csv')
       .then((r) => r.text())
       .then((txt) => {
         const parsed: CourseRow[] = txt

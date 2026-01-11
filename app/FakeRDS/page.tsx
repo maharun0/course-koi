@@ -42,7 +42,7 @@ export default function FakeRDSPage() {
 
   // Fetch and parse CSV
   useEffect(() => {
-    fetch("/courses_pdf.csv")
+    fetch("/courses.csv")
       .then((r) => r.text())
       .then((txt) => {
         const parsed: CourseRow[] = txt
