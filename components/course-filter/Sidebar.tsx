@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useMemo, useDeferredValue } from 'react';
+import { useState, useMemo, useDeferredValue, Dispatch, SetStateAction } from 'react';
 import { FaStar, FaPlus, FaTimes, FaLayerGroup, FaSearch, FaTrash, FaChevronLeft, FaChevronRight, FaCheck, FaBook } from 'react-icons/fa';
 import { CourseRow } from '@/types/course';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface SidebarProps {
   savedCourses: CourseRow[];
-  setSavedCourses: (courses: CourseRow[]) => void;
+  setSavedCourses: Dispatch<SetStateAction<CourseRow[]>>;
   courseOptions: string[];
   addCourse: (courseCode?: string) => void;
   inputCourse: string;
@@ -22,6 +25,58 @@ interface SidebarProps {
   coursePriorities: Record<string, number>;
   setCoursePriorities: (priorities: Record<string, number>) => void;
   onTabChange?: (tab: 'list' | 'schedule') => void;
+}
+
+interface SortableItemProps {
+  c: CourseRow;
+  activeCourse: string | null;
+  isCollapsed: boolean;
+  handleMyCourseClick: (code: string) => void;
+  handleRemoveCourse: (code: string) => void;
+}
+
+function SortableCourseItem({ c, activeCourse, isCollapsed, handleMyCourseClick, handleRemoveCourse }: SortableItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: c.courseCode });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : 'auto',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`relative group rounded transition-all duration-200 touch-none mb-0.5 ${activeCourse === c.courseCode
+        ? 'bg-indigo-600/90 text-white shadow'
+        : 'hover:bg-white/10 text-gray-300 hover:text-white'
+        }`}
+    >
+      <button
+        onClick={() => handleMyCourseClick(c.courseCode)}
+        className={`w-full text-left px-2 py-1.5 flex items-center gap-2 cursor-pointer ${isCollapsed ? 'justify-center' : ''}`}
+        title={c.courseCode}
+      >
+        <div className={`w-1.5 h-1.5 rounded-full shadow shrink-0 ${activeCourse === c.courseCode ? 'bg-white' : 'bg-green-400'}`} />
+        {!isCollapsed && <span className="font-medium text-xs truncate flex-1">{c.courseCode}</span>}
+      </button>
+      {!isCollapsed && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRemoveCourse(c.courseCode);
+          }}
+          className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+        >
+          <FaTimes size={10} />
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function Sidebar({
@@ -40,6 +95,22 @@ export default function Sidebar({
   setCoursePriorities,
   onTabChange,
 }: SidebarProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (active.id !== over?.id) {
+      setSavedCourses((items: CourseRow[]) => {
+        const oldIndex = items.findIndex((i) => i.courseCode === active.id);
+        const newIndex = items.findIndex((i) => i.courseCode === over?.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  }
+
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const deferredInput = useDeferredValue(searchTerm);
@@ -139,36 +210,20 @@ export default function Sidebar({
                 Add courses to see them here.
               </div>
             )}
-            {savedCourses.map((c) => (
-              <div
-                key={c.courseCode}
-                className={`relative group rounded transition-all duration-200 ${activeCourse === c.courseCode
-                  ? 'bg-indigo-600/90 text-white shadow'
-                  : 'hover:bg-white/10 text-gray-300 hover:text-white'
-                  }`}
-              >
-                <button
-                  onClick={() => handleMyCourseClick(c.courseCode)}
-                  className={`w-full text-left px-2 py-1.5 flex items-center gap-2 cursor-pointer ${isCollapsed ? 'justify-center' : ''
-                    }`}
-                  title={c.courseCode}
-                >
-                  <div className={`w-1.5 h-1.5 rounded-full shadow shrink-0 ${activeCourse === c.courseCode ? 'bg-white' : 'bg-green-400'}`} />
-                  {!isCollapsed && <span className="font-medium text-xs truncate flex-1">{c.courseCode}</span>}
-                </button>
-                {!isCollapsed && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveCourse(c.courseCode);
-                    }}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                  >
-                    <FaTimes size={10} />
-                  </button>
-                )}
-              </div>
-            ))}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={savedCourses.map(c => c.courseCode)} strategy={verticalListSortingStrategy}>
+                {savedCourses.map((c) => (
+                  <SortableCourseItem
+                    key={c.courseCode}
+                    c={c}
+                    activeCourse={activeCourse}
+                    isCollapsed={isCollapsed}
+                    handleMyCourseClick={handleMyCourseClick}
+                    handleRemoveCourse={handleRemoveCourse}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         </div>
 
