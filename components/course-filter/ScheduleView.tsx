@@ -281,6 +281,7 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
                                                 <FaTimes size={8} />
                                             </div>
                                             <div className="font-bold leading-tight text-center truncate w-full">{item.course.courseCode}</div>
+                                            <div className="text-[11px] font-extrabold text-center truncate w-full opacity-90">{item.course.facultyCode}</div>
                                             <div className="text-[9px] opacity-80 text-center truncate w-full">Sec {item.course.section}</div>
                                             <div className="hidden sm:block text-[8px] opacity-60 text-center uppercase tracking-wide group-hover:opacity-100 transition-opacity truncate w-full">{item.course.room}</div>
                                         </div>
