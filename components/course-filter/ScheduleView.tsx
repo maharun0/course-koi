@@ -43,6 +43,9 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
     const [importText, setImportText] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Edit Mode State
+    const [editingId, setEditingId] = useState<string | null>(null);
+
     // Load from LocalStorage
     useEffect(() => {
         const saved = localStorage.getItem('courseKoi_schedule');
@@ -274,6 +277,45 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         return temp;
     }, [selectedCourses, previewCourse]);
 
+    // --- STATS LOGIC ---
+    const tagStats = useMemo(() => {
+        const stats: Record<string, number> = {};
+
+        // 1. Existing Courses
+        selectedCourses.forEach(c => {
+            if (c.section !== 'Custom') return;
+            const sched = parseCourseTime(c.time, c.id, c.courseCode, c.section);
+            if (!sched) return;
+
+            // Calculate duration in minutes (per occurrence * number of occurrences is handled by slots)
+            let mins = 0;
+            sched.slots.forEach(slot => {
+                mins += (slot.end - slot.start);
+            });
+
+            const tag = c.courseCode; // We store Name/Tag in courseCode
+            stats[tag] = (stats[tag] || 0) + mins;
+        });
+
+        // 2. Unsaved Preview
+        let unsavedMins = 0;
+        let unsavedTag = '';
+        if (sidebarTab === 'custom' && customTag && customDays.length > 0) {
+            // Parse start/end
+            const [sh, sm] = customStartTime.split(':').map(Number);
+            const [eh, em] = customEndTime.split(':').map(Number);
+            const startMins = sh * 60 + sm;
+            const endMins = eh * 60 + em;
+
+            if (endMins > startMins) {
+                unsavedMins = (endMins - startMins) * customDays.length;
+                unsavedTag = customTag;
+            }
+        }
+
+        return { stats, unsavedMins, unsavedTag };
+    }, [selectedCourses, customTag, customDays, customStartTime, customEndTime, sidebarTab]);
+
     // --- ACTIONS ---
 
     const copyRoutineText = () => {
@@ -436,8 +478,11 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         const dayString = customDays.map(d => dayMap[d]).join('');
         const timeString = `${dayString} ${formatTime(customStartTime)} - ${formatTime(customEndTime)}`;
 
+        // If editing, use existing ID, else create new
+        const idToUse = editingId || `custom-${customTag}-${Date.now()}`;
+
         const newEvent: CourseRow = {
-            id: `custom-${customTag}-${Date.now()}`,
+            id: idToUse,
             courseCode: customTag,
             section: 'Custom', // Keep section 'Custom' for internal logic identification
             days: dayString,
@@ -445,13 +490,69 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
             color: customTag.toLowerCase() === 'work' ? 'bg-yellow-500 text-black' : 'bg-gray-600'
         };
 
-        const success = handleCourseSelect(newEvent);
-
-        if (success) {
+        if (editingId) {
+            // Update logic: Replace the object with specific ID
+            // If we use handleCourseSelect it toggles. We want to force Replace.
+            // Manually update:
+            setSelectedCourses(prev => prev.map(c => c.id === editingId ? newEvent : c));
+            setNotification({ message: "Event updated!", type: "success" });
+            setEditingId(null);
             setCustomTag('');
             setCustomDays([]);
-            setNotification({ message: "Custom event added!", type: "success" });
+        } else {
+            // Add new logic
+            const success = handleCourseSelect(newEvent);
+            if (success) {
+                setCustomTag('');
+                setCustomDays([]);
+                setNotification({ message: "Custom event added!", type: "success" });
+            }
         }
+    };
+
+    const handleEditEvent = (course: CourseRow) => {
+        setEditingId(course.id);
+        setCustomTag(course.courseCode);
+
+        // Parse Days
+        // Course days string is like 'MWF'
+        // Map back to 'Mon', 'Wed' etc.
+        const charToDay: Record<string, string> = { 'M': 'Mon', 'T': 'Tue', 'W': 'Wed', 'R': 'Thu', 'F': 'Fri', 'A': 'Sat', 'S': 'Sun' };
+        const days: string[] = [];
+        for (const char of course.days) {
+            if (charToDay[char]) days.push(charToDay[char]);
+        }
+        setCustomDays(days);
+
+        // Parse Time
+        // Format: "MWF 08:00 AM - 09:00 AM" or just "08:00 AM - 09:00 AM" part
+        // We need to extract hours/mins and convert to 24h for input
+        // Regex look for digits
+        const timePart = course.time.replace(/^[A-Z]+\s/, ''); // Remove day prefix if present
+        const [startStr, endStr] = timePart.split('-').map(s => s.trim());
+
+        const to24 = (time12: string) => {
+            const [time, modifier] = time12.split(' ');
+            let [hours, minutes] = time.split(':').map(Number);
+            if (modifier === 'PM' && hours < 12) hours += 12;
+            if (modifier === 'AM' && hours === 12) hours = 0;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        };
+
+        if (startStr && endStr) {
+            setCustomStartTime(to24(startStr));
+            setCustomEndTime(to24(endStr));
+        }
+
+        setSidebarTab('custom');
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setCustomTag('');
+        setCustomDays([]);
+        setCustomStartTime('08:00');
+        setCustomEndTime('10:00');
     };
 
     const toggleDay = (day: string) => {
@@ -676,12 +777,64 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                             </div>
                         </div>
 
-                        <button
-                            onClick={handleAddCustomEvent}
-                            className="mt-auto w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2"
-                        >
-                            <FaCheck /> Add Custom Event
-                        </button>
+                        {/* Tag Stats */}
+                        <div className="space-y-1 pt-2 border-t border-white/5">
+                            {Object.entries(tagStats.stats).map(([tag, mins]) => {
+                                // Check if we have unsaved time for this tag
+                                const isEditTag = tagStats.unsavedTag === tag && tagStats.unsavedMins > 0;
+
+                                const formatDuration = (m: number) => {
+                                    const hours = Math.floor(m / 60);
+                                    const minutes = m % 60;
+                                    return `${hours > 0 ? hours + 'h ' : ''}${minutes > 0 ? minutes + 'm' : ''}`;
+                                };
+
+                                return (
+                                    <div key={tag} className="flex justify-between items-center text-[11px] text-gray-400">
+                                        <span>{tag}</span>
+                                        <div className="flex gap-1">
+                                            <span>{formatDuration(mins)}</span>
+                                            {isEditTag && (
+                                                <span className="opacity-50 text-indigo-300">
+                                                    (+{formatDuration(tagStats.unsavedMins)})
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {/* If current tag is NEW (not in stats yet) show it purely as unsaved */}
+                            {tagStats.unsavedTag && !tagStats.stats[tagStats.unsavedTag] && tagStats.unsavedMins > 0 && (
+                                <div className="flex justify-between items-center text-[11px] text-gray-400">
+                                    <span>{tagStats.unsavedTag}</span>
+                                    <span className="opacity-50 text-indigo-300">
+                                        (+{(() => {
+                                            const m = tagStats.unsavedMins;
+                                            const hours = Math.floor(m / 60);
+                                            const minutes = m % 60;
+                                            return `${hours > 0 ? hours + 'h ' : ''}${minutes > 0 ? minutes + 'm' : ''}`;
+                                        })()})
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex gap-2 mt-auto">
+                            {editingId && (
+                                <button
+                                    onClick={cancelEdit}
+                                    className="flex-1 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-bold text-sm transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            )}
+                            <button
+                                onClick={handleAddCustomEvent}
+                                className={`flex-1 py-2 text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${editingId ? 'bg-indigo-500 hover:bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+                            >
+                                {editingId ? 'Update Event' : 'Add Event+'}
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
@@ -797,14 +950,33 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                         >
                                             {!item.isPreview && (
                                                 <div
-                                                    className="absolute top-0.5 right-0.5 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleCourseSelect(item.course);
-                                                    }}
-                                                    title="Remove from schedule"
+                                                    className="absolute top-0.5 right-0.5 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-30"
                                                 >
-                                                    <FaTimes size={8} />
+                                                    {/* Edit Button */}
+                                                    {item.course.section === 'Custom' && (
+                                                        <div
+                                                            className="p-0.5 cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEditEvent(item.course);
+                                                            }}
+                                                            title="Edit Event"
+                                                        >
+                                                            {/* Simple Pen Icon manually since we might replace icons */}
+                                                            <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 512 512" height="8" width="8" xmlns="http://www.w3.org/2000/svg"><path d="M497.9 142.1l-46.1 46.1c-4.7 4.7-12.3 4.7-17 0l-111-111c-4.7-4.7-4.7-12.3 0-17l46.1-46.1c18.7-18.7 49.1-18.7 67.9 0l60.1 60.1c18.8 18.7 18.8 49.1 0 67.9zM284.2 99.8L21.6 362.4.4 483.9c-2.9 16.4 11.4 30.6 27.8 27.8l121.5-21.3 262.6-262.6c4.7-4.7 4.7-12.3 0-17l-111-111c-4.8-4.7-12.4-4.7-17.1 0zM124.1 339.9c-5.5-5.5-5.5-14.3 0-19.8l154-154c5.5-5.5 14.3-5.5 19.8 0s5.5 14.3 0 19.8l-154 154c-5.5 5.5-14.3 5.5-19.8 0zM88 424h48v36.3l-64.5 11.3-31.1-31.1L51.7 376H88v48z"></path></svg>
+                                                        </div>
+                                                    )}
+                                                    {/* Delete Button */}
+                                                    <div
+                                                        className="p-0.5 cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleCourseSelect(item.course);
+                                                        }}
+                                                        title="Remove from schedule"
+                                                    >
+                                                        <FaTimes size={8} />
+                                                    </div>
                                                 </div>
                                             )}
                                             <div className="font-bold leading-tight text-center truncate w-full">{item.course.courseCode}</div>
