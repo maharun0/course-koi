@@ -7,7 +7,8 @@ import { FaCopy, FaDownload, FaCheck, FaTimes } from 'react-icons/fa';
 import { toPng } from 'html-to-image';
 
 interface ScheduleViewProps {
-    courses: CourseRow[];
+    courses: CourseRow[]; // This represents starred courses
+    allCourses: CourseRow[]; // New prop for all courses
 }
 
 // Define the standard time slots requested
@@ -23,8 +24,17 @@ const TIME_SLOTS = [
 
 const DAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-export default function ScheduleView({ courses }: ScheduleViewProps) {
+export default function ScheduleView({ courses, allCourses }: ScheduleViewProps) {
     const [selectedCourses, setSelectedCourses] = useState<CourseRow[]>([]);
+    const [sidebarTab, setSidebarTab] = useState<'courses' | 'custom'>('courses');
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Custom Event State
+    const [customTag, setCustomTag] = useState('');
+    const [customDays, setCustomDays] = useState<string[]>([]);
+    const [customStartTime, setCustomStartTime] = useState('08:00');
+    const [customEndTime, setCustomEndTime] = useState('10:00');
+
     const [notification, setNotification] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
     const scheduleRef = useRef<HTMLDivElement>(null);
     const [isLoaded, setIsLoaded] = useState(false);
@@ -125,8 +135,37 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
         return { top: `${top}%`, height: `${height}%` };
     };
 
+    // --- PREVIEW LOGIC ---
+    const previewCourse = useMemo(() => {
+        if (sidebarTab !== 'custom' || customDays.length === 0) return null;
+
+        // Format Time to 12h for parser (Shared logic)
+        const formatTime = (time: string) => {
+            const [h, m] = time.split(':').map(Number);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h % 12 || 12;
+            return `${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`;
+        };
+
+        const dayMap: Record<string, string> = { 'Mon': 'M', 'Tue': 'T', 'Wed': 'W', 'Thu': 'R', 'Fri': 'F', 'Sat': 'A', 'Sun': 'S' };
+        const dayString = customDays.map(d => dayMap[d]).join('');
+        const timeString = `${dayString} ${formatTime(customStartTime)} - ${formatTime(customEndTime)}`;
+
+        return {
+            id: 'preview-custom',
+            courseCode: customTag || 'Preview',
+            section: 'Custom',
+            facultyCode: '',
+            time: timeString,
+            room: '',
+            seat: 0,
+            credit: 0,
+            days: dayString,
+        } as CourseRow;
+    }, [sidebarTab, customDays, customStartTime, customEndTime, customTag]);
+
     const daySchedules = useMemo(() => {
-        const temp: Record<string, { course: CourseRow; color: string; style: { top: string; height: string } }[]> = {};
+        const temp: Record<string, { course: CourseRow; color: string; isPreview?: boolean; style: { top: string; height: string } }[]> = {};
         DAYS.forEach(d => (temp[d] = []));
 
         const colors = [
@@ -134,24 +173,39 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
             'bg-indigo-600', 'bg-teal-600', 'bg-orange-600'
         ];
 
-        selectedCourses.forEach((course, idx) => {
+        // Combine selected courses with preview (if exists)
+        const coursesToRender = [...selectedCourses];
+        if (previewCourse) {
+            coursesToRender.push(previewCourse);
+        }
+
+        coursesToRender.forEach((course, idx) => {
+            const isPreview = course.id === 'preview-custom';
             const schedule = parseCourseTime(course.time, course.id, course.courseCode, course.section);
             if (!schedule) return;
 
+            // Determine Color
+            let color = isPreview ? 'bg-gray-500' : colors[idx % colors.length];
+            if (course.courseCode.toLowerCase() === 'work') {
+                color = 'bg-yellow-500 text-black'; // Work is yellow
+            } else if (!isPreview && course.section === 'Custom') {
+                color = 'bg-gray-600'; // Other customs default
+            }
+
             schedule.slots.forEach(slot => {
                 const { top, height } = getPosition(slot.start, slot.end);
-                // Clamp or check if out of bounds? User said "over border is fine".
                 if (temp[slot.day]) {
                     temp[slot.day].push({
                         course,
-                        color: colors[idx % colors.length],
+                        color,
+                        isPreview,
                         style: { top, height }
                     });
                 }
             });
         });
         return temp;
-    }, [selectedCourses]);
+    }, [selectedCourses, previewCourse]);
 
     // --- ACTIONS ---
 
@@ -181,6 +235,50 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
         }
     };
 
+    const handleAddCustomEvent = () => {
+        if (!customTag) {
+            setNotification({ message: "Please enter a tag name", type: "error" });
+            return;
+        }
+        if (customDays.length === 0) {
+            setNotification({ message: "Select at least one day", type: "error" });
+            return;
+        }
+
+        // Format Time to 12h for parser
+        const formatTime = (time: string) => {
+            const [h, m] = time.split(':').map(Number);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h % 12 || 12;
+            return `${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`;
+        };
+
+        const dayMap: Record<string, string> = { 'Mon': 'M', 'Tue': 'T', 'Wed': 'W', 'Thu': 'R', 'Fri': 'F', 'Sat': 'A', 'Sun': 'S' };
+        const dayString = customDays.map(d => dayMap[d]).join('');
+        const timeString = `${dayString} ${formatTime(customStartTime)} - ${formatTime(customEndTime)}`;
+
+        const newEvent: CourseRow = {
+            id: `custom-${Date.now()}`,
+            courseCode: customTag,
+            section: 'Custom',
+            facultyCode: 'Me',
+            time: timeString,
+            room: 'N/A',
+            seat: 0,
+            credit: 0,
+            days: dayString,
+        };
+
+        handleCourseSelect(newEvent);
+        setCustomTag('');
+        setCustomDays([]);
+        setNotification({ message: "Custom event added!", type: "success" });
+    };
+
+    const toggleDay = (day: string) => {
+        setCustomDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
+    };
+
     return (
         <div className="flex flex-col lg:flex-row gap-4 w-full h-full">
             {/* Toast Notification */}
@@ -197,7 +295,149 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
                 </div>
             )}
 
-            {/* Left: Schedule Grid */}
+            {/* Left: Sidebar (Swapped Position) */}
+            <div className="w-full lg:w-72 glass rounded-xl p-3 flex flex-col shrink-0 lg:h-full h-auto max-h-[500px] lg:max-h-full transition-all">
+                {/* Tabs */}
+                <div className="flex gap-1 p-1 bg-black/20 rounded-lg mb-3">
+                    <button
+                        onClick={() => setSidebarTab('courses')}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${sidebarTab === 'courses' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Courses
+                    </button>
+                    <button
+                        onClick={() => setSidebarTab('custom')}
+                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${sidebarTab === 'custom' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Custom
+                    </button>
+                </div>
+
+                {sidebarTab === 'courses' ? (
+                    <>
+                        <div className="mb-3 relative">
+                            <input
+                                type="text"
+                                placeholder="Search courses..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 placeholder-gray-500"
+                            />
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                            {/* Render Filtered All Courses */}
+                            {allCourses
+                                .filter(c =>
+                                (c.courseCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    c.section.toString().includes(searchTerm))
+                                )
+                                .slice(0, 50) // Limit for performance
+                                .map(course => {
+                                    const isSelected = selectedCourses.some(c => c.id === course.id);
+                                    return (
+                                        <button
+                                            key={course.id}
+                                            onClick={() => handleCourseSelect(course)}
+                                            className={`w-full text-left p-2 rounded-lg border transition-all duration-200 group relative ${isSelected
+                                                ? 'bg-indigo-600/90 border-indigo-500 shadow-md transform scale-[1.02]'
+                                                : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-gray-400'
+                                                }`}
+                                        >
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className={`font-bold text-sm ${isSelected ? 'text-white' : 'group-hover:text-gray-200'}`}>
+                                                    {course.courseCode}
+                                                </span>
+                                                <span className={`text-[10px] px-1.5 rounded ${isSelected ? 'bg-black/20 text-indigo-100' : 'bg-black/20 text-gray-500'}`}>
+                                                    {course.section}
+                                                </span>
+                                            </div>
+                                            <div className="text-[10px] opacity-80 truncate">
+                                                {course.time}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex flex-col gap-4 h-full overflow-y-auto custom-scrollbar">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-400 uppercase">Tag Name</label>
+                            <input
+                                value={customTag}
+                                onChange={(e) => setCustomTag(e.target.value)}
+                                placeholder="e.g. Work, Gym"
+                                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                            />
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {['Work', 'Gym', 'Study', 'Class'].map(tag => (
+                                    <button
+                                        key={tag}
+                                        onClick={() => setCustomTag(tag)}
+                                        className="text-[10px] px-2 py-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 transition-colors"
+                                    >
+                                        {tag}+
+                                    </button>
+                                ))}
+                            </div>
+                            {customTag.toLowerCase() === 'work' && (
+                                <p className="text-[10px] text-yellow-500 flex items-center gap-1 mt-1">
+                                    <span className="w-2 h-2 rounded-full bg-yellow-500 inline-block"></span>
+                                    Will appear yellow
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-400 uppercase">Days</label>
+                            <div className="grid grid-cols-4 gap-2">
+                                {DAYS.map(day => (
+                                    <button
+                                        key={day}
+                                        onClick={() => toggleDay(day)}
+                                        className={`py-1.5 px-2 rounded-md text-xs font-bold transition-all border border-transparent ${customDays.includes(day)
+                                            ? 'bg-indigo-600 text-white shadow-lg border-indigo-400'
+                                            : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:border-white/10'
+                                            }`}
+                                    >
+                                        {day}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-400 uppercase">Time</label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="time"
+                                    value={customStartTime}
+                                    onClick={(e) => e.currentTarget.showPicker()}
+                                    onChange={(e) => setCustomStartTime(e.target.value)}
+                                    className="bg-black/20 border border-white/10 rounded px-2 py-2 text-sm text-white focus:outline-none cursor-pointer flex-1 text-center hover:bg-white/5 transition-colors"
+                                />
+                                <span className="text-gray-500 text-xs font-medium">to</span>
+                                <input
+                                    type="time"
+                                    value={customEndTime}
+                                    onClick={(e) => e.currentTarget.showPicker()}
+                                    onChange={(e) => setCustomEndTime(e.target.value)}
+                                    className="bg-black/20 border border-white/10 rounded px-2 py-2 text-sm text-white focus:outline-none cursor-pointer flex-1 text-center hover:bg-white/5 transition-colors"
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleAddCustomEvent}
+                            className="mt-auto w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2"
+                        >
+                            <FaCheck /> Add Custom Event
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Right: Schedule Grid */}
             <div className="flex-1 glass rounded-xl p-3 overflow-hidden flex flex-col">
                 <div className="flex justify-between items-center mb-4 shrink-0">
                     <h2 className="text-xl font-bold text-white">Weekly Schedule</h2>
@@ -263,23 +503,28 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
                                     {daySchedules[day]?.map((item, i) => (
                                         <div
                                             key={i}
-                                            className={`absolute inset-x-0 mx-0.5 rounded shadow-lg p-1 text-xs text-white border border-white/10 flex flex-col justify-center items-center hover:scale-[1.02] hover:z-20 transition-all cursor-default group overflow-hidden ${item.color}`}
+                                            className={`absolute inset-x-0 mx-0.5 rounded shadow-lg p-1 text-xs text-white border border-white/10 flex flex-col justify-center items-center transition-all cursor-default group overflow-hidden ${item.color} ${item.isPreview
+                                                ? 'opacity-50 border-dashed border-white/40 pointer-events-none'
+                                                : 'hover:scale-[1.02] hover:z-20'
+                                                }`}
                                             style={{
                                                 top: item.style.top,
                                                 height: item.style.height,
                                                 minHeight: '20px' // Ensure visibility for short blocks
                                             }}
                                         >
-                                            <div
-                                                className="absolute top-0.5 right-0.5 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleCourseSelect(item.course);
-                                                }}
-                                                title="Remove from schedule"
-                                            >
-                                                <FaTimes size={8} />
-                                            </div>
+                                            {!item.isPreview && (
+                                                <div
+                                                    className="absolute top-0.5 right-0.5 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleCourseSelect(item.course);
+                                                    }}
+                                                    title="Remove from schedule"
+                                                >
+                                                    <FaTimes size={8} />
+                                                </div>
+                                            )}
                                             <div className="font-bold leading-tight text-center truncate w-full">{item.course.courseCode}</div>
                                             <div className="text-[11px] font-extrabold text-center truncate w-full opacity-90">{item.course.facultyCode}</div>
                                             <div className="text-[9px] opacity-80 text-center truncate w-full">Sec {item.course.section}</div>
@@ -298,48 +543,7 @@ export default function ScheduleView({ courses }: ScheduleViewProps) {
                 </div>
             </div>
 
-            {/* Right: Starred Sections Sidebar */}
-            <div className="w-full lg:w-64 glass rounded-xl p-3 flex flex-col shrink-0 lg:h-full h-auto max-h-[400px] lg:max-h-full">
-                <h3 className="text-sm font-bold text-white mb-3 flex items-center justify-between uppercase tracking-wider">
-                    Starred
-                    <span className="bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded text-xs">{courses.length}</span>
-                </h3>
-                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
-                    {courses.length === 0 && (
-                        <p className="text-gray-500 text-xs text-center py-8">Star courses from the list to see them here.</p>
-                    )}
-                    {courses.map(course => {
-                        const isSelected = selectedCourses.some(c => c.id === course.id);
-                        const isOtherSectionSelected = !isSelected && selectedCourses.some(c => c.courseCode === course.courseCode);
 
-                        return (
-                            <button
-                                key={course.id}
-                                onClick={() => handleCourseSelect(course)}
-                                className={`w-full text-left p-2 rounded-lg border transition-all duration-200 group relative ${isSelected
-                                    ? 'bg-indigo-600/90 border-indigo-500 shadow-md transform scale-[1.02]'
-                                    : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-gray-400'
-                                    }`}
-                            >
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className={`font-bold text-sm ${isSelected ? 'text-white' : 'group-hover:text-gray-200'}`}>
-                                        {course.courseCode}
-                                    </span>
-                                    <span className={`text-[10px] px-1.5 rounded ${isSelected ? 'bg-black/20 text-indigo-100' : 'bg-black/20 text-gray-500'}`}>
-                                        {course.section}
-                                    </span>
-                                </div>
-                                <div className="text-[10px] opacity-80 truncate">
-                                    {course.time}
-                                </div>
-                                {isOtherSectionSelected && (
-                                    <div className="absolute top-1/2 -translate-y-1/2 right-2 w-1.5 h-1.5 rounded-full bg-yellow-500" title="Alt section selected" />
-                                )}
-                            </button>
-                        )
-                    })}
-                </div>
-            </div>
         </div>
     );
 }
