@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { CourseRow } from '@/types/course';
 import { parseCourseTime } from '@/utils/timeUtils';
-import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaPaste } from 'react-icons/fa';
+import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaFileExport, FaPaste, FaCloudUploadAlt, FaFileCode } from 'react-icons/fa';
 import { toPng, toBlob } from 'html-to-image';
 
 interface ScheduleViewProps {
@@ -39,7 +39,9 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
     const scheduleRef = useRef<HTMLDivElement>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
+    const [exportExpanded, setExportExpanded] = useState(false);
     const [importText, setImportText] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Load from LocalStorage
     useEffect(() => {
@@ -58,6 +60,33 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
     useEffect(() => {
         if (isLoaded) {
             localStorage.setItem('courseKoi_schedule', JSON.stringify(selectedCourses));
+        }
+    }, [selectedCourses, isLoaded]);
+
+    // Color Migration & Cleanup Effect
+    // Ensures all courses have a color assigned, and cleans data structure if needed
+    useEffect(() => {
+        if (!isLoaded) return;
+
+        let hasChanges = false;
+        const colors = [
+            'bg-blue-600', 'bg-purple-600', 'bg-pink-600',
+            'bg-indigo-600', 'bg-teal-600', 'bg-orange-600'
+        ];
+
+        const updated = selectedCourses.map((c, idx) => {
+            if (!c.color) {
+                hasChanges = true;
+                let newColor = colors[idx % colors.length];
+                if (c.courseCode.toLowerCase() === 'work') newColor = 'bg-yellow-500 text-black';
+                else if (c.section === 'Custom' && c.courseCode.toLowerCase() !== 'work') newColor = 'bg-gray-600';
+                return { ...c, color: newColor };
+            }
+            return c;
+        });
+
+        if (hasChanges) {
+            setSelectedCourses(updated);
         }
     }, [selectedCourses, isLoaded]);
 
@@ -89,7 +118,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
             isCustom ? c.id !== course.id : c.courseCode !== course.courseCode
         );
 
-        const newSchedule = parseCourseTime(course.time, course.id, course.courseCode, course.section);
+        const newSchedule = parseCourseTime(course.time, course.id, course.courseCode, course.section || '');
 
         if (!newSchedule) {
             setNotification({ message: "Invalid time format.", type: "error" });
@@ -100,7 +129,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         let conflictReason = "";
 
         for (const existing of coursesToCheck) {
-            const existingSchedule = parseCourseTime(existing.time, existing.id, existing.courseCode, existing.section);
+            const existingSchedule = parseCourseTime(existing.time, existing.id, existing.courseCode, existing.section || '');
             if (!existingSchedule) continue;
 
             for (const newSlot of newSchedule.slots) {
@@ -129,10 +158,26 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         // 4. Update State
         if (sameCourseIndex !== -1) {
             const newSelection = [...selectedCourses];
-            newSelection[sameCourseIndex] = course;
+            // Preserve existing color if updating
+            const existingColor = newSelection[sameCourseIndex].color;
+            newSelection[sameCourseIndex] = { ...course, color: existingColor || course.color };
             setSelectedCourses(newSelection);
         } else {
-            setSelectedCourses([...selectedCourses, course]);
+            // Assign a permanent color
+            const colors = [
+                'bg-blue-600', 'bg-purple-600', 'bg-pink-600',
+                'bg-indigo-600', 'bg-teal-600', 'bg-orange-600'
+            ];
+            let newColor = colors[selectedCourses.length % colors.length];
+
+            // Overrides
+            if (course.courseCode.toLowerCase() === 'work') {
+                newColor = 'bg-yellow-500 text-black';
+            } else if (course.section === 'Custom' && course.courseCode.toLowerCase() !== 'work') {
+                newColor = 'bg-gray-600';
+            }
+
+            setSelectedCourses([...selectedCourses, { ...course, color: newColor }]);
         }
         return true;
     };
@@ -194,16 +239,25 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
 
         coursesToRender.forEach((course, idx) => {
             const isPreview = course.id === 'preview-custom';
-            const schedule = parseCourseTime(course.time, course.id, course.courseCode, course.section);
+            const schedule = parseCourseTime(course.time, course.id, course.courseCode, course.section || '');
             if (!schedule) return;
 
             // Determine Color
-            let color = isPreview ? 'bg-gray-500' : colors[idx % colors.length];
-            if (course.courseCode.toLowerCase() === 'work') {
-                color = 'bg-yellow-500 text-black'; // Work is yellow
-            } else if (!isPreview && course.section === 'Custom') {
-                color = 'bg-gray-600'; // Other customs default
+            // Use stored color if available, else fallback (though now we always store)
+            let color = course.color;
+
+            if (!color) {
+                // Fallback for logic
+                color = colors[idx % colors.length];
+                if (course.courseCode.toLowerCase() === 'work') {
+                    color = 'bg-yellow-500 text-black';
+                } else if (course.section === 'Custom') {
+                    color = 'bg-gray-600';
+                }
             }
+
+            // Preview override
+            if (isPreview) color = 'bg-gray-500';
 
             schedule.slots.forEach(slot => {
                 const { top, height } = getPosition(slot.start, slot.end);
@@ -222,7 +276,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
 
     // --- ACTIONS ---
 
-    const copyRoutine = () => {
+    const copyRoutineText = () => {
         // Group by type
         const classes = selectedCourses.filter(c => c.section !== 'Custom');
         const customEvents = selectedCourses.filter(c => c.section === 'Custom');
@@ -253,12 +307,31 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
             text += "\n";
         });
 
-        // Add verification code for import
-        const data = btoa(JSON.stringify(selectedCourses));
-        text += `\n||DATA:${data}||`;
+        // NO DATA BLOCK HERE
 
         navigator.clipboard.writeText(text);
-        setNotification({ message: "Routine copied to clipboard!", type: "success" });
+        setNotification({ message: "Schedule text copied!", type: "success" });
+    };
+
+    const copyExportData = () => {
+        // Uniform Export: Copy exactly what goes into the file
+        const data = JSON.stringify(selectedCourses, null, 2);
+        navigator.clipboard.writeText(data);
+        setNotification({ message: "Schedule JSON copied!", type: "success" });
+        setExportExpanded(false);
+    };
+
+    const downloadExportFile = () => {
+        const data = JSON.stringify(selectedCourses, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'course-koi-schedule.json';
+        link.click();
+        URL.revokeObjectURL(url);
+        setNotification({ message: "Schedule exported as JSON!", type: "success" });
+        setExportExpanded(false);
     };
 
     const copyImageToClipboard = async () => {
@@ -276,22 +349,54 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         }
     };
 
-    const handleImport = () => {
+    const handleImportText = () => {
         try {
+            // Try to find the data block first
             const match = importText.match(/\|\|DATA:(.*)\|\|/);
+            let jsonString = "";
+
             if (match && match[1]) {
-                const json = atob(match[1]);
-                const parsed = JSON.parse(json);
+                jsonString = atob(match[1]);
+            } else {
+                // Try parsing raw if user pasted raw JSON
+                jsonString = importText;
+            }
+
+            const parsed = JSON.parse(jsonString);
+            if (Array.isArray(parsed)) {
                 setSelectedCourses(parsed);
                 setNotification({ message: "Schedule imported successfully!", type: "success" });
                 setShowImportModal(false);
                 setImportText('');
             } else {
-                setNotification({ message: "Invalid format. Cannot find data block.", type: "error" });
+                throw new Error("Invalid Array");
             }
         } catch (e) {
-            setNotification({ message: "Failed to parse import data.", type: "error" });
+            setNotification({ message: "Invalid format. Cannot parse schedule data.", type: "error" });
         }
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const result = event.target?.result as string;
+                const parsed = JSON.parse(result);
+                if (Array.isArray(parsed)) {
+                    setSelectedCourses(parsed);
+                    setNotification({ message: "File imported successfully!", type: "success" });
+                    setShowImportModal(false);
+                } else {
+                    setNotification({ message: "Invalid file format.", type: "error" });
+                }
+            } catch (err) {
+                setNotification({ message: "Failed to read file.", type: "error" });
+            }
+        };
+        reader.readAsText(file);
     };
 
     const downloadImage = async () => {
@@ -332,15 +437,12 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         const timeString = `${dayString} ${formatTime(customStartTime)} - ${formatTime(customEndTime)}`;
 
         const newEvent: CourseRow = {
-            id: `custom-${Date.now()}`,
+            id: `custom-${customTag}-${Date.now()}`,
             courseCode: customTag,
-            section: 'Custom',
-            facultyCode: 'Me',
-            time: timeString,
-            room: 'N/A',
-            seat: 0,
-            credit: 0,
+            section: 'Custom', // Keep section 'Custom' for internal logic identification
             days: dayString,
+            time: timeString,
+            color: customTag.toLowerCase() === 'work' ? 'bg-yellow-500 text-black' : 'bg-gray-600'
         };
 
         const success = handleCourseSelect(newEvent);
@@ -374,31 +476,70 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
 
             {/* Import Modal */}
             {showImportModal && (
-                <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-[#0f172a] border border-white/10 rounded-xl p-6 w-full max-w-lg shadow-2xl animate-fade-in-down">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-white">Import Schedule</h3>
-                            <button onClick={() => setShowImportModal(false)} className="text-gray-400 hover:text-white"><FaTimes /></button>
+                <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
+                    <div className="bg-[#0f172a]/90 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative overflow-hidden">
+                        {/* Glow effect */}
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <FaFileImport className="text-indigo-400" /> Import Schedule
+                            </h3>
+                            <button onClick={() => setShowImportModal(false)} className="text-gray-400 hover:text-white transition-colors"><FaTimes /></button>
                         </div>
-                        <p className="text-sm text-gray-400 mb-4">Paste the text copied from another schedule to import it here. This will replace your current schedule.</p>
-                        <textarea
-                            value={importText}
-                            onChange={(e) => setImportText(e.target.value)}
-                            placeholder="Paste schedule text here..."
-                            className="w-full h-32 bg-black/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-indigo-500 mb-4 resize-none"
-                        />
-                        <div className="flex gap-3 justify-end">
-                            <button onClick={() => setShowImportModal(false)} className="px-4 py-2 hover:bg-white/5 rounded-lg text-sm text-gray-300">Cancel</button>
-                            <button onClick={handleImport} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold flex items-center gap-2">
-                                <FaFileImport /> Import
+
+                        <div className="space-y-4">
+                            {/* File Upload Option */}
+                            <div
+                                onClick={() => fileInputRef.current?.click()}
+                                className="border-2 border-dashed border-white/10 hover:border-indigo-500/50 hover:bg-white/5 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all group"
+                            >
+                                <div className="p-3 bg-white/5 rounded-full mb-3 group-hover:bg-indigo-500/20 transition-colors">
+                                    <FaCloudUploadAlt className="text-2xl text-gray-400 group-hover:text-indigo-400" />
+                                </div>
+                                <p className="text-sm font-medium text-gray-300">Click to upload JSON file</p>
+                                <p className="text-xs text-gray-500">or drag and drop</p>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    accept=".json"
+                                    onChange={handleFileUpload}
+                                />
+                            </div>
+
+                            <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <div className="w-full border-t border-white/10"></div>
+                                </div>
+                                <div className="relative flex justify-center text-xs">
+                                    <span className="px-2 bg-[#0f172a] text-gray-500 uppercase tracking-wider">Or paste code</span>
+                                </div>
+                            </div>
+
+                            <textarea
+                                value={importText}
+                                onChange={(e) => setImportText(e.target.value)}
+                                placeholder="Paste the export code starting with ||DATA:..."
+                                className="w-full h-24 bg-black/40 border border-white/10 rounded-xl p-3 text-xs font-mono text-gray-300 focus:outline-none focus:border-indigo-500 resize-none placeholder-gray-600 transition-colors"
+                            />
+
+                            <button
+                                onClick={handleImportText}
+                                disabled={!importText}
+                                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+                            >
+                                <FaCheck /> Import Data
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Left: Sidebar (Swapped Position) */}
-            <div className="w-full lg:w-72 glass rounded-xl p-3 flex flex-col shrink-0 lg:h-full h-auto max-h-[500px] lg:max-h-full transition-all">
+
+
+            {/* Left: Sidebar (Swapped Position -> Right) */}
+            <div className="w-full lg:w-72 glass rounded-xl p-3 flex flex-col shrink-0 lg:h-full h-auto max-h-[500px] lg:max-h-full transition-all lg:order-2">
                 {/* Tabs */}
                 <div className="flex gap-1 p-1 bg-black/20 rounded-lg mb-3">
                     <button
@@ -430,8 +571,8 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                             {/* Render Filtered All Courses */}
                             {allCourses
                                 .filter(c =>
-                                (c.courseCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    c.section.toString().includes(searchTerm))
+                                    c.courseCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    (c.section && c.section.toString().includes(searchTerm))
                                 )
                                 .slice(0, 50) // Limit for performance
                                 .map(course => {
@@ -472,7 +613,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                 className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
                             />
                             <div className="flex flex-wrap gap-2 mt-2">
-                                {['Work', 'Gym', 'Study', 'Class'].map(tag => (
+                                {['Work', 'Gym', 'Study', 'Class', 'Bootcamp'].map(tag => (
                                     <button
                                         key={tag}
                                         onClick={() => setCustomTag(tag)}
@@ -540,22 +681,48 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
             </div>
 
             {/* Right: Schedule Grid */}
-            <div className="flex-1 glass rounded-xl p-3 overflow-hidden flex flex-col">
+            <div className="flex-1 glass rounded-xl p-3 overflow-hidden flex flex-col lg:order-1">
                 <div className="flex justify-between items-center mb-4 shrink-0">
                     <h2 className="text-xl font-bold text-white">Weekly Schedule</h2>
                     <div className="flex gap-2">
+                        <div className="relative z-50">
+                            <button
+                                onClick={() => setExportExpanded(!exportExpanded)}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors text-white ${exportExpanded ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-white/10 hover:bg-white/20'}`}
+                                title="Export Schedule"
+                            >
+                                <FaFileExport /> <span className="hidden sm:inline">Export</span>
+                            </button>
+                            {exportExpanded && (
+                                <div className="absolute top-full left-0 mt-2 w-48 bg-[#0f172a] border border-white/10 rounded-xl shadow-xl p-1.5 flex flex-col gap-1 animate-fade-in origin-top-left overflow-hidden">
+                                    <button
+                                        onClick={copyExportData}
+                                        className="w-full text-left px-3 py-2 hover:bg-white/10 rounded-lg text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-3"
+                                    >
+                                        <FaClipboard className="text-indigo-400" /> Copy JSON
+                                    </button>
+                                    <button
+                                        onClick={downloadExportFile}
+                                        className="w-full text-left px-3 py-2 hover:bg-white/10 rounded-lg text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-3"
+                                    >
+                                        <FaFileCode className="text-purple-400" /> Download JSON
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="h-4 w-[1px] bg-white/10 my-auto mx-1"></div>
                         <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Import Schedule">
                             <FaFileImport /> <span className="hidden sm:inline">Import</span>
                         </button>
                         <div className="h-4 w-[1px] bg-white/10 my-auto mx-1"></div>
-                        <button onClick={copyRoutine} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Copy Text">
-                            <FaCopy /> <span className="hidden sm:inline">Copy Text</span>
+                        <button onClick={copyRoutineText} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Copy Text Only">
+                            <FaCopy /> <span className="hidden sm:inline">Text</span>
                         </button>
-                        <button onClick={copyImageToClipboard} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Copy Image to Clipboard">
-                            <FaClipboard /> <span className="hidden sm:inline">Copy Image</span>
+                        <button onClick={copyImageToClipboard} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Copy Image">
+                            <FaClipboard /> <span className="hidden sm:inline">Image</span>
                         </button>
                         <button onClick={downloadImage} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm transition-colors text-white" title="Download PNG">
-                            <FaDownload /> <span className="hidden sm:inline">Download</span>
+                            <FaDownload /> <span className="hidden sm:inline">PNG</span>
                         </button>
                     </div>
                 </div>
