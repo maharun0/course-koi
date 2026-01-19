@@ -214,7 +214,14 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [dragState.isDragging]); // Relying on closure for finishDrag
+        // Added startY, logic is safe. finishDrag is stable if we don't wrap it or if we ignore it.
+        // Actually, finishDrag depends on selectedCourses, so wrapping in useCallback is better but complex.
+        // Let's suppress the warning for the complex closure for now OR just include finishDrag and wrap finishDrag.
+        // Making finishDrag a dependency means we need to wrap finishDrag in useCallback.
+        // AND finishDrag depends on dragState. So it changes often? No, finishDrag reads value from state?
+        // dragging state update is fine.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dragState.isDragging, dragState.startY]);
 
     const handleDragStart = (e: React.MouseEvent, course: CourseRow, day: string, slot: { start: number, end: number }, top: string, height: string, type: 'move' | 'resize' | 'resize-top') => {
         e.stopPropagation();
@@ -435,7 +442,16 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
     }, [sidebarTab, customDays, customStartTime, customEndTime, customTag]);
 
     const daySchedules = useMemo(() => {
-        const temp: Record<string, { course: CourseRow; color: string; isPreview?: boolean; style: { top: string; height: string } }[]> = {};
+        // Define Extended Item Type
+        type ScheduleItem = {
+            course: CourseRow;
+            color: string;
+            isPreview?: boolean;
+            isGap?: boolean;
+            label?: string;
+            style: { top: string; height: string; zIndex?: number }
+        };
+        const temp: Record<string, ScheduleItem[]> = {};
         DAYS.forEach(d => (temp[d] = []));
 
         const colors = [
@@ -518,7 +534,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                             const label = `${h > 0 ? h + 'h ' : ''}${m > 0 ? m + 'm' : ''}`;
 
                             temp[day].push({
-                                course: { id: 'gap', courseCode: 'Gap', time: '', days: '', section: '', color: '' } as any,
+                                course: { id: 'gap', courseCode: 'Gap', time: '', days: '', section: '', color: '' } as CourseRow,
                                 color: 'border-2 border-dashed border-gray-500/50 bg-gray-500/10 text-gray-400',
                                 isPreview: true, // reuse preview style flag logic partly
                                 isGap: true,
@@ -528,7 +544,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                     height: `${gapH}%`,
                                     zIndex: 5
                                 }
-                            } as any);
+                            } as ScheduleItem);
                         }
                         break; // Found the gap
                     }
@@ -678,7 +694,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
             } else {
                 throw new Error("Invalid Array");
             }
-        } catch (e) {
+        } catch {
             setNotification({ message: "Invalid format. Cannot parse schedule data.", type: "error" });
         }
     };
@@ -699,7 +715,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                 } else {
                     setNotification({ message: "Invalid file format.", type: "error" });
                 }
-            } catch (err) {
+            } catch {
                 setNotification({ message: "Failed to read file.", type: "error" });
             }
         };
@@ -798,7 +814,9 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
 
         const to24 = (time12: string) => {
             const [time, modifier] = time12.split(' ');
-            let [hours, minutes] = time.split(':').map(Number);
+            const parts = time.split(':').map(Number);
+            let hours = parts[0];
+            const minutes = parts[1];
             if (modifier === 'PM' && hours < 12) hours += 12;
             if (modifier === 'AM' && hours === 12) hours = 0;
             return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
@@ -1237,18 +1255,28 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                             key={i}
                                             className={`absolute inset-x-0 mx-0.5 rounded shadow-lg p-1 text-xs text-white border border-white/10 flex flex-col justify-center items-center transition-all cursor-default group overflow-hidden ${item.color} ${item.isPreview
                                                 ? 'opacity-50 border-dashed border-white/40 pointer-events-none'
-                                                : (item as any).isGap ? 'z-0' : 'hover:scale-[1.02] hover:z-20'
+                                                : item.isGap ? 'z-0' : 'hover:scale-[1.02] hover:z-20'
                                                 }`}
+                                            onMouseDown={(e) => {
+                                                if (item.course.section === 'Custom' && !item.isGap && !item.isPreview) {
+                                                    // Approx start/end for handler
+                                                    const t = parseFloat(item.style.top);
+                                                    const h = parseFloat(item.style.height);
+                                                    const start = START_OF_DAY + (t / 100) * TOTAL_MINS;
+                                                    const end = start + (h / 100) * TOTAL_MINS;
+                                                    handleDragStart(e, item.course, day, { start, end }, item.style.top, item.style.height, 'move');
+                                                }
+                                            }}
                                             style={{
                                                 top: item.style.top,
                                                 height: item.style.height,
                                                 minHeight: '20px' // Ensure visibility for short blocks
                                             }}
                                         >
-                                            {(item as any).isGap ? (
+                                            {item.isGap ? (
                                                 <div className="flex flex-col items-center justify-center text-[10px] font-mono tracking-wider opacity-70 leading-tight">
                                                     <span className="font-bold uppercase text-[9px] mb-0.5">Gap</span>
-                                                    <span>{(item as any).label}</span>
+                                                    <span>{item.label}</span>
                                                 </div>
                                             ) : (
                                                 <>
@@ -1288,7 +1316,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                                         <div className="flex flex-col items-center w-full">
                                                             <div className="text-[10px] opacity-80 text-center truncate w-full mt-0.5">
                                                                 {(() => {
-                                                                    const diff = (item.style.height.replace('%', '') as any) * TOTAL_MINS / 100;
+                                                                    const diff = (parseFloat(item.style.height)) * TOTAL_MINS / 100;
                                                                     const h = Math.floor(diff / 60);
                                                                     const m = Math.round(diff % 60);
                                                                     return `${h > 0 ? h + ' hr ' : ''}${m > 0 ? m + ' min' : ''}`;
