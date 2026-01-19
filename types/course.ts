@@ -1,15 +1,16 @@
 export interface CourseRow {
   id: string;
   courseCode: string;
-  credit: number;
-  section: string;
-  facultyCode: string;
+  credit?: number;
+  section?: string;
+  facultyCode?: string;
   days: string;
   time: string;
-  room: string;
-  seat: number;
+  room?: string;
+  seat?: number;
   priority?: number;
   starred?: boolean;
+  color?: string;
 }
 
 export type SortKey = keyof CourseRow | 'index';
