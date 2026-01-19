@@ -24,6 +24,10 @@ const TIME_SLOTS = [
 
 const DAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
+const START_OF_DAY = 8 * 60; // 08:00 AM
+const END_OF_DAY = 19 * 60 + 30; // 07:30 PM (End of last slot)
+const TOTAL_MINS = END_OF_DAY - START_OF_DAY;
+
 export default function ScheduleView({ courses, allCourses }: ScheduleViewProps) {
     const [selectedCourses, setSelectedCourses] = useState<CourseRow[]>([]);
     const [sidebarTab, setSidebarTab] = useState<'courses' | 'custom'>('courses');
@@ -45,6 +49,213 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
 
     // Edit Mode State
     const [editingId, setEditingId] = useState<string | null>(null);
+
+    // --- DRAG & DROP STATE ---
+    interface DragState {
+        isDragging: boolean;
+        mode: 'move' | 'resize' | 'resize-top' | null;
+        courseId: string | null;
+        originalCourse: CourseRow | null;
+        startY: number;
+        startTop: number;   // %
+        startHeight: number; // %
+        currentTop: number; // %
+        currentHeight: number; // %
+        originalDay: string;
+        currentDay: string;
+        startMins: number;
+        endMins: number;
+    }
+
+    const [dragState, setDragState] = useState<DragState>({
+        isDragging: false,
+        mode: null,
+        courseId: null,
+        originalCourse: null,
+        startY: 0,
+        startTop: 0,
+        startHeight: 0,
+        currentTop: 0,
+        currentHeight: 0,
+        originalDay: '',
+        currentDay: '',
+        startMins: 0,
+        endMins: 0,
+    });
+
+    // --- HOVER GAP DETECTION ---
+    const [hoverState, setHoverState] = useState<{ day: string; mins: number } | null>(null);
+
+    // Helpers
+    const minutesToTimeStr = (totalMins: number): string => {
+        // Clamp
+        totalMins = Math.max(START_OF_DAY, Math.min(END_OF_DAY, totalMins));
+
+        const h = Math.floor(totalMins / 60);
+        const m = Math.round(totalMins % 60);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 || 12;
+        return `${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`;
+    };
+
+    const finishDrag = () => {
+        if (!dragState.originalCourse || !dragState.courseId) {
+            setDragState(prev => ({ ...prev, isDragging: false }));
+            return;
+        }
+
+        const startMins = START_OF_DAY + (dragState.currentTop / 100) * TOTAL_MINS;
+        const endMins = startMins + (dragState.currentHeight / 100) * TOTAL_MINS;
+
+        let s = Math.round(startMins / 5) * 5;
+        let e = Math.round(endMins / 5) * 5;
+
+        if (s < START_OF_DAY) { const diff = e - s; s = START_OF_DAY; e = s + diff; }
+        if (e > END_OF_DAY) { const diff = e - s; e = END_OF_DAY; s = e - diff; }
+        if (s < START_OF_DAY) s = START_OF_DAY;
+
+        const timeStr = `${minutesToTimeStr(s)} - ${minutesToTimeStr(e)}`;
+
+        const dayLetterMap: Record<string, string> = { 'Mon': 'M', 'Tue': 'T', 'Wed': 'W', 'Thu': 'R', 'Fri': 'F', 'Sat': 'A', 'Sun': 'S' };
+        const newDayLetter = dayLetterMap[dragState.currentDay] || 'M';
+
+        const original = dragState.originalCourse;
+        const origDayBlock = dayLetterMap[dragState.originalDay];
+
+        const remainingDays = original.days.replace(origDayBlock, '');
+
+        let newCourses = [...selectedCourses];
+
+        if (remainingDays.length === 0) {
+            newCourses = newCourses.filter(c => c.id !== original.id);
+        } else {
+            const idx = newCourses.findIndex(c => c.id === original.id);
+            if (idx !== -1) {
+                newCourses[idx] = { ...original, days: remainingDays };
+            }
+        }
+
+        const newId = remainingDays.length > 0 ? `custom-${original.courseCode}-${Date.now()}` : original.id;
+
+        const newEntry: CourseRow = {
+            ...original,
+            id: newId,
+            days: newDayLetter,
+            time: `${newDayLetter} ${timeStr}`,
+            color: original.color
+        };
+
+        newCourses.push(newEntry);
+        setSelectedCourses(newCourses);
+
+        setDragState(prev => ({ ...prev, isDragging: false, courseId: null }));
+    };
+
+    // Global Mouse Handlers for Drag
+    useEffect(() => {
+        if (!dragState.isDragging) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!scheduleRef.current) return;
+            const dy = e.clientY - dragState.startY;
+            // Approximate content height based on Viewport/Start
+            // Better: use relative % change if we knew px height.
+            // Let's assume height is fixed or calculate from ref?
+            // The ref is the container.
+            // The day columns are 100% height.
+            const gridRect = scheduleRef.current.getBoundingClientRect();
+            const contentHeight = gridRect.height - 32; // Header
+
+            const dPct = (dy / contentHeight) * 100;
+            const dMins = (dPct / 100) * TOTAL_MINS;
+
+            setDragState(prev => {
+                let newStart = prev.startMins;
+                let newEnd = prev.endMins;
+
+                if (prev.mode === 'move') {
+                    const snap = 5;
+                    const rawNewStart = prev.startMins + dMins;
+                    const snappedStart = Math.round(rawNewStart / snap) * snap;
+                    const diff = snappedStart - prev.startMins;
+                    newStart = prev.startMins + diff;
+                    newEnd = prev.endMins + diff;
+                } else if (prev.mode === 'resize') {
+                    const snap = 5;
+                    const rawNewEnd = prev.endMins + dMins;
+                    newEnd = Math.round(rawNewEnd / snap) * snap;
+                    if (newEnd - newStart < 15) newEnd = newStart + 15;
+                } else if (prev.mode === 'resize-top') {
+                    const snap = 5;
+                    const rawNewStart = prev.startMins + dMins;
+                    newStart = Math.round(rawNewStart / snap) * snap;
+                    if (newEnd - newStart < 15) newStart = newEnd - 15;
+                }
+
+                const newTop = ((newStart - START_OF_DAY) / TOTAL_MINS) * 100;
+                const newHeight = ((newEnd - newStart) / TOTAL_MINS) * 100;
+
+                return {
+                    ...prev,
+                    currentTop: newTop,
+                    currentHeight: newHeight,
+                };
+            });
+        };
+
+        const handleMouseUp = () => {
+            finishDrag();
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [dragState.isDragging]); // Relying on closure for finishDrag
+
+    const handleDragStart = (e: React.MouseEvent, course: CourseRow, day: string, slot: { start: number, end: number }, top: string, height: string, type: 'move' | 'resize' | 'resize-top') => {
+        e.stopPropagation();
+        e.preventDefault();
+
+        const t = parseFloat(top);
+        const h = parseFloat(height);
+
+        setDragState({
+            isDragging: true,
+            mode: type,
+            courseId: course.id,
+            originalCourse: course,
+            startY: e.clientY,
+            startTop: t,
+            startHeight: h,
+            currentTop: t,
+            currentHeight: h,
+            originalDay: day,
+            currentDay: day,
+            startMins: slot.start,
+            endMins: slot.end,
+        });
+    };
+
+    // Grid Hover Handlers
+    const handleGridMouseMove = (e: React.MouseEvent, day: string) => {
+        if (dragState.isDragging) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const h = rect.height;
+        const pct = (y / h);
+        const mins = START_OF_DAY + pct * TOTAL_MINS;
+
+        setHoverState({ day, mins });
+    };
+
+    const handleGridMouseLeave = () => {
+        setHoverState(null);
+    };
 
     // Load from LocalStorage
     useEffect(() => {
@@ -186,9 +397,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
     };
 
     // --- POSITIONING LOGIC ---
-    const START_OF_DAY = 8 * 60; // 08:00 AM
-    const END_OF_DAY = 19 * 60 + 30; // 07:30 PM (End of last slot)
-    const TOTAL_MINS = END_OF_DAY - START_OF_DAY;
+    // Constants moved to module scope
 
     const getPosition = (start: number, end: number) => {
         const top = ((start - START_OF_DAY) / TOTAL_MINS) * 100;
@@ -274,8 +483,64 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                 }
             });
         });
+
+        // GAP DETECTION RENDER
+        if (hoverState && !dragState.isDragging) {
+            const { day, mins } = hoverState;
+            const items = temp[day];
+            if (items && items.length > 0) {
+                // Sort items by start time (top %)
+                const sorted = [...items].sort((a, b) => parseFloat(a.style.top) - parseFloat(b.style.top));
+
+                // Find the gap surrounding 'mins'
+                for (let i = 0; i < sorted.length - 1; i++) {
+                    const current = sorted[i];
+                    const next = sorted[i + 1];
+
+                    // Get end of current
+                    const curTop = parseFloat(current.style.top);
+                    const curH = parseFloat(current.style.height);
+                    const curEndMins = START_OF_DAY + (curTop + curH) / 100 * TOTAL_MINS;
+
+                    // Get start of next
+                    const nextStartMins = START_OF_DAY + (parseFloat(next.style.top) / 100 * TOTAL_MINS);
+
+                    // Check if mouse is between them
+                    if (mins >= curEndMins && mins <= nextStartMins) {
+                        // We are in a gap!
+                        const diff = nextStartMins - curEndMins;
+                        if (diff > 10) { // Min gap size to show
+                            const gapH = (diff / TOTAL_MINS) * 100;
+                            const gapTop = ((curEndMins - START_OF_DAY) / TOTAL_MINS) * 100;
+
+                            const h = Math.floor(diff / 60);
+                            const m = Math.round(diff % 60);
+                            const label = `${h > 0 ? h + 'h ' : ''}${m > 0 ? m + 'm' : ''}`;
+
+                            temp[day].push({
+                                course: { id: 'gap', courseCode: 'Gap', time: '', days: '', section: '', color: '' } as any,
+                                color: 'border-2 border-dashed border-gray-500/50 bg-gray-500/10 text-gray-400',
+                                isPreview: true, // reuse preview style flag logic partly
+                                isGap: true,
+                                label,
+                                style: {
+                                    top: `${gapTop}%`,
+                                    height: `${gapH}%`,
+                                    zIndex: 5
+                                }
+                            } as any);
+                        }
+                        break; // Found the gap
+                    }
+                }
+            }
+        }
+
         return temp;
-    }, [selectedCourses, previewCourse]);
+    }, [selectedCourses, previewCourse, hoverState, dragState.isDragging]);
+
+
+
 
     // --- STATS LOGIC ---
     const tagStats = useMemo(() => {
@@ -921,7 +1186,11 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                 </div>
 
                                 {/* Content Area */}
-                                <div className="absolute top-8 bottom-0 w-full">
+                                <div
+                                    className="absolute top-8 bottom-0 w-full"
+                                    onMouseMove={(e) => handleGridMouseMove(e, day)}
+                                    onMouseLeave={handleGridMouseLeave}
+                                >
                                     {/* Background Grid Lines */}
                                     {TIME_SLOTS.map((slot, i) => {
                                         const { top } = getPosition(slot.start, 0);
@@ -940,7 +1209,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                             key={i}
                                             className={`absolute inset-x-0 mx-0.5 rounded shadow-lg p-1 text-xs text-white border border-white/10 flex flex-col justify-center items-center transition-all cursor-default group overflow-hidden ${item.color} ${item.isPreview
                                                 ? 'opacity-50 border-dashed border-white/40 pointer-events-none'
-                                                : 'hover:scale-[1.02] hover:z-20'
+                                                : (item as any).isGap ? 'z-0' : 'hover:scale-[1.02] hover:z-20'
                                                 }`}
                                             style={{
                                                 top: item.style.top,
@@ -948,52 +1217,61 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                                 minHeight: '20px' // Ensure visibility for short blocks
                                             }}
                                         >
-                                            {!item.isPreview && (
-                                                <div
-                                                    className="absolute top-0.5 right-0.5 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-30"
-                                                >
-                                                    {/* Edit Button */}
-                                                    {item.course.section === 'Custom' && (
-                                                        <div
-                                                            className="p-0.5 cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEditEvent(item.course);
-                                                            }}
-                                                            title="Edit Event"
-                                                        >
-                                                            {/* Simple Pen Icon manually since we might replace icons */}
-                                                            <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 512 512" height="8" width="8" xmlns="http://www.w3.org/2000/svg"><path d="M497.9 142.1l-46.1 46.1c-4.7 4.7-12.3 4.7-17 0l-111-111c-4.7-4.7-4.7-12.3 0-17l46.1-46.1c18.7-18.7 49.1-18.7 67.9 0l60.1 60.1c18.8 18.7 18.8 49.1 0 67.9zM284.2 99.8L21.6 362.4.4 483.9c-2.9 16.4 11.4 30.6 27.8 27.8l121.5-21.3 262.6-262.6c4.7-4.7 4.7-12.3 0-17l-111-111c-4.8-4.7-12.4-4.7-17.1 0zM124.1 339.9c-5.5-5.5-5.5-14.3 0-19.8l154-154c5.5-5.5 14.3-5.5 19.8 0s5.5 14.3 0 19.8l-154 154c-5.5 5.5-14.3 5.5-19.8 0zM88 424h48v36.3l-64.5 11.3-31.1-31.1L51.7 376H88v48z"></path></svg>
-                                                        </div>
-                                                    )}
-                                                    {/* Delete Button */}
-                                                    <div
-                                                        className="p-0.5 cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleCourseSelect(item.course);
-                                                        }}
-                                                        title="Remove from schedule"
-                                                    >
-                                                        <FaTimes size={8} />
-                                                    </div>
-                                                </div>
-                                            )}
-                                            <div className="font-bold leading-tight text-center truncate w-full">{item.course.courseCode}</div>
-                                            {item.course.section === 'Custom' ? (
-                                                <div className="text-[9px] opacity-80 text-center truncate w-full mt-0.5">
-                                                    {(() => {
-                                                        const diff = (item.style.height.replace('%', '') as any) * TOTAL_MINS / 100;
-                                                        const h = Math.floor(diff / 60);
-                                                        const m = Math.round(diff % 60);
-                                                        return `${h > 0 ? h + ' hr ' : ''}${m > 0 ? m + ' min' : ''}`;
-                                                    })()}
+                                            {(item as any).isGap ? (
+                                                <div className="flex flex-col items-center justify-center text-[10px] font-mono tracking-wider opacity-70 leading-tight">
+                                                    <span className="font-bold uppercase text-[9px] mb-0.5">Gap</span>
+                                                    <span>{(item as any).label}</span>
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <div className="text-[11px] font-extrabold text-center truncate w-full opacity-90">{item.course.facultyCode}</div>
-                                                    <div className="text-[9px] opacity-80 text-center truncate w-full">Sec {item.course.section}</div>
-                                                    <div className="hidden sm:block text-[8px] opacity-60 text-center uppercase tracking-wide group-hover:opacity-100 transition-opacity truncate w-full">{item.course.room}</div>
+                                                    {!item.isPreview && (
+                                                        <div
+                                                            className="absolute top-0.5 right-0.5 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-30"
+                                                        >
+                                                            {/* Edit Button */}
+                                                            {item.course.section === 'Custom' && (
+                                                                <div
+                                                                    className="p-0.5 cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleEditEvent(item.course);
+                                                                    }}
+                                                                    title="Edit Event"
+                                                                >
+                                                                    {/* Simple Pen Icon manually since we might replace icons */}
+                                                                    <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 512 512" height="8" width="8" xmlns="http://www.w3.org/2000/svg"><path d="M497.9 142.1l-46.1 46.1c-4.7 4.7-12.3 4.7-17 0l-111-111c-4.7-4.7-4.7-12.3 0-17l46.1-46.1c18.7-18.7 49.1-18.7 67.9 0l60.1 60.1c18.8 18.7 18.8 49.1 0 67.9zM284.2 99.8L21.6 362.4.4 483.9c-2.9 16.4 11.4 30.6 27.8 27.8l121.5-21.3 262.6-262.6c4.7-4.7 4.7-12.3 0-17l-111-111c-4.8-4.7-12.4-4.7-17.1 0zM124.1 339.9c-5.5-5.5-5.5-14.3 0-19.8l154-154c5.5-5.5 14.3-5.5 19.8 0s5.5 14.3 0 19.8l-154 154c-5.5 5.5-14.3 5.5-19.8 0zM88 424h48v36.3l-64.5 11.3-31.1-31.1L51.7 376H88v48z"></path></svg>
+                                                                </div>
+                                                            )}
+                                                            {/* Delete Button */}
+                                                            <div
+                                                                className="p-0.5 cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleCourseSelect(item.course);
+                                                                }}
+                                                                title="Remove from schedule"
+                                                            >
+                                                                <FaTimes size={8} />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    <div className="font-bold leading-tight text-center truncate w-full">{item.course.courseCode}</div>
+                                                    {item.course.section === 'Custom' ? (
+                                                        <div className="text-[9px] opacity-80 text-center truncate w-full mt-0.5">
+                                                            {(() => {
+                                                                const diff = (item.style.height.replace('%', '') as any) * TOTAL_MINS / 100;
+                                                                const h = Math.floor(diff / 60);
+                                                                const m = Math.round(diff % 60);
+                                                                return `${h > 0 ? h + ' hr ' : ''}${m > 0 ? m + ' min' : ''}`;
+                                                            })()}
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div className="text-[11px] font-extrabold text-center truncate w-full opacity-90">{item.course.facultyCode}</div>
+                                                            <div className="text-[9px] opacity-80 text-center truncate w-full">Sec {item.course.section}</div>
+                                                            <div className="hidden sm:block text-[8px] opacity-60 text-center uppercase tracking-wide group-hover:opacity-100 transition-opacity truncate w-full">{item.course.room}</div>
+                                                        </>
+                                                    )}
                                                 </>
                                             )}
                                         </div>
