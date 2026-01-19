@@ -1257,13 +1257,24 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                                     )}
                                                     <div className="font-bold leading-tight text-center truncate w-full">{item.course.courseCode}</div>
                                                     {item.course.section === 'Custom' ? (
-                                                        <div className="text-[9px] opacity-80 text-center truncate w-full mt-0.5">
-                                                            {(() => {
-                                                                const diff = (item.style.height.replace('%', '') as any) * TOTAL_MINS / 100;
-                                                                const h = Math.floor(diff / 60);
-                                                                const m = Math.round(diff % 60);
-                                                                return `${h > 0 ? h + ' hr ' : ''}${m > 0 ? m + ' min' : ''}`;
-                                                            })()}
+                                                        <div className="flex flex-col items-center w-full">
+                                                            <div className="text-[10px] opacity-80 text-center truncate w-full mt-0.5">
+                                                                {(() => {
+                                                                    const diff = (item.style.height.replace('%', '') as any) * TOTAL_MINS / 100;
+                                                                    const h = Math.floor(diff / 60);
+                                                                    const m = Math.round(diff % 60);
+                                                                    return `${h > 0 ? h + ' hr ' : ''}${m > 0 ? m + ' min' : ''}`;
+                                                                })()}
+                                                            </div>
+                                                            <div className="text-[11.5px] font-semibold opacity-90 text-center truncate w-full mt-2.5">
+                                                                {(() => {
+                                                                    const top = parseFloat(item.style.top);
+                                                                    const height = parseFloat(item.style.height);
+                                                                    const s = START_OF_DAY + (top / 100) * TOTAL_MINS;
+                                                                    const e = s + (height / 100) * TOTAL_MINS;
+                                                                    return `${minutesToTimeStr(s)} - ${minutesToTimeStr(e)}`;
+                                                                })()}
+                                                            </div>
                                                         </div>
                                                     ) : (
                                                         <>
