@@ -824,6 +824,32 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         setCustomDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]);
     };
 
+    // --- SEARCH & FILTER OPTIMIZATION ---
+    const displayedCourses = useMemo(() => {
+        const searchLower = searchTerm.toLowerCase();
+        // Prioritize "Starred" courses passed via props
+        const starredIds = new Set(courses.map(c => c.id));
+
+        const starredMatches: CourseRow[] = [];
+        const regularMatches: CourseRow[] = [];
+
+        // Single pass O(N) filtering and partitioning
+        for (const course of allCourses) {
+            if (course.courseCode.toLowerCase().includes(searchLower) ||
+                (course.section && course.section.toString().includes(searchLower))) {
+
+                if (starredIds.has(course.id)) {
+                    starredMatches.push(course);
+                } else {
+                    regularMatches.push(course);
+                }
+            }
+        }
+
+        // Combine: Starred first, then unselected. Slice to limit.
+        return [...starredMatches, ...regularMatches].slice(0, 50);
+    }, [allCourses, courses, searchTerm]);
+
     return (
         <div className="flex flex-col lg:flex-row gap-4 w-full h-full">
             {/* Toast Notification */}
@@ -936,42 +962,44 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                 placeholder="Search courses..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 placeholder-gray-500"
+                                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 placeholder-gray-500 pr-8"
                             />
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                                >
+                                    <FaTimes size={12} />
+                                </button>
+                            )}
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
                             {/* Render Filtered All Courses */}
-                            {allCourses
-                                .filter(c =>
-                                    c.courseCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    (c.section && c.section.toString().includes(searchTerm))
-                                )
-                                .slice(0, 50) // Limit for performance
-                                .map(course => {
-                                    const isSelected = selectedCourses.some(c => c.id === course.id);
-                                    return (
-                                        <button
-                                            key={course.id}
-                                            onClick={() => handleCourseSelect(course)}
-                                            className={`w-full text-left p-2 rounded-lg border transition-all duration-200 group relative ${isSelected
-                                                ? 'bg-indigo-600/90 border-indigo-500 shadow-md transform scale-[1.02]'
-                                                : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-gray-400'
-                                                }`}
-                                        >
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className={`font-bold text-sm ${isSelected ? 'text-white' : 'group-hover:text-gray-200'}`}>
-                                                    {course.courseCode}
-                                                </span>
-                                                <span className={`text-[10px] px-1.5 rounded ${isSelected ? 'bg-black/20 text-indigo-100' : 'bg-black/20 text-gray-500'}`}>
-                                                    {course.section}
-                                                </span>
-                                            </div>
-                                            <div className="text-[10px] opacity-80 truncate">
-                                                {course.time}
-                                            </div>
-                                        </button>
-                                    );
-                                })}
+                            {displayedCourses.map(course => {
+                                const isSelected = selectedCourses.some(c => c.id === course.id);
+                                return (
+                                    <button
+                                        key={course.id}
+                                        onClick={() => handleCourseSelect(course)}
+                                        className={`w-full text-left p-2 rounded-lg border transition-all duration-200 group relative ${isSelected
+                                            ? 'bg-indigo-600/90 border-indigo-500 shadow-md transform scale-[1.02]'
+                                            : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-gray-400'
+                                            }`}
+                                    >
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className={`font-bold text-sm ${isSelected ? 'text-white' : 'group-hover:text-gray-200'}`}>
+                                                {course.courseCode}
+                                            </span>
+                                            <span className={`text-[10px] px-1.5 rounded ${isSelected ? 'bg-black/20 text-indigo-100' : 'bg-black/20 text-gray-500'}`}>
+                                                {course.section}
+                                            </span>
+                                        </div>
+                                        <div className="text-[10px] opacity-80 truncate">
+                                            {course.time}
+                                        </div>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </>
                 ) : (
