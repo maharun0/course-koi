@@ -3,8 +3,8 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { CourseRow } from '@/types/course';
 import { parseCourseTime } from '@/utils/timeUtils';
-import { FaCopy, FaDownload, FaCheck, FaTimes } from 'react-icons/fa';
-import { toPng } from 'html-to-image';
+import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaPaste } from 'react-icons/fa';
+import { toPng, toBlob } from 'html-to-image';
 
 interface ScheduleViewProps {
     courses: CourseRow[]; // This represents starred courses
@@ -38,6 +38,8 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
     const [notification, setNotification] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
     const scheduleRef = useRef<HTMLDivElement>(null);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
+    const [importText, setImportText] = useState('');
 
     // Load from LocalStorage
     useEffect(() => {
@@ -67,23 +69,31 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         }
     }, [notification]);
 
-    const handleCourseSelect = (course: CourseRow) => {
-        // 1. Toggle Off if already selected
+    const handleCourseSelect = (course: CourseRow): boolean => {
+        // 1. Toggle Off if already selected (Removal)
         if (selectedCourses.some(c => c.id === course.id)) {
             setSelectedCourses(prev => prev.filter(c => c.id !== course.id));
-            return;
+            return false; // Removed, so not "added"
         }
 
-        // 2. Prepare Swap if another section exists
-        const sameCourseIndex = selectedCourses.findIndex(c => c.courseCode === course.courseCode);
+        const isCustom = course.section === 'Custom';
+
+        // 2. Prepare Swap (Only for non-custom courses)
+        // For custom events, we never swap, we allow multiples (unless they clash)
+        const sameCourseIndex = isCustom ? -1 : selectedCourses.findIndex(c => c.courseCode === course.courseCode);
 
         // 3. Conflict Detection
-        const coursesToCheck = selectedCourses.filter(c => c.courseCode !== course.courseCode);
+        // For Custom: Check against ALL courses including other "Work" blocks.
+        // For Regular: Ignore same courseCode because we are about to swap it anyway.
+        const coursesToCheck = selectedCourses.filter(c =>
+            isCustom ? c.id !== course.id : c.courseCode !== course.courseCode
+        );
+
         const newSchedule = parseCourseTime(course.time, course.id, course.courseCode, course.section);
 
         if (!newSchedule) {
             setNotification({ message: "Invalid time format.", type: "error" });
-            return;
+            return false;
         }
 
         let hasConflict = false;
@@ -99,7 +109,9 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                         // Check overlap
                         if (Math.max(newSlot.start, existingSlot.start) < Math.min(newSlot.end, existingSlot.end)) {
                             hasConflict = true;
-                            conflictReason = `Clashes with ${existing.courseCode}`;
+                            // For custom events with same name, make message clear
+                            const name = existing.id === course.id ? "itself" : existing.courseCode;
+                            conflictReason = `Clashes with ${name} (${existing.section === 'Custom' ? 'Custom' : 'Section ' + existing.section})`;
                             break;
                         }
                     }
@@ -111,7 +123,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
 
         if (hasConflict) {
             setNotification({ message: conflictReason, type: 'error' });
-            return;
+            return false;
         }
 
         // 4. Update State
@@ -122,6 +134,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         } else {
             setSelectedCourses([...selectedCourses, course]);
         }
+        return true;
     };
 
     // --- POSITIONING LOGIC ---
@@ -210,14 +223,75 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
     // --- ACTIONS ---
 
     const copyRoutine = () => {
-        let text = "My Schedule\n\n";
-        text += "Course    Sec   Fac   Time\n";
-        text += "----------------------------------------\n";
-        selectedCourses.forEach(c => {
-            text += `${c.courseCode.padEnd(9)} ${c.section.padEnd(5)} ${c.facultyCode.padEnd(5)} ${c.time}\n`;
+        // Group by type
+        const classes = selectedCourses.filter(c => c.section !== 'Custom');
+        const customEvents = selectedCourses.filter(c => c.section === 'Custom');
+
+        // Group custom events by tag
+        const customByTag: Record<string, CourseRow[]> = {};
+        customEvents.forEach(c => {
+            const tag = c.courseCode; // We stored tag in courseCode
+            if (!customByTag[tag]) customByTag[tag] = [];
+            customByTag[tag].push(c);
         });
+
+        let text = "My Schedule\n\n";
+
+        if (classes.length > 0) {
+            text += "[Classes]\n";
+            classes.forEach(c => {
+                text += `${c.courseCode} - Sec ${c.section} (${c.time})\n`;
+            });
+            text += "\n";
+        }
+
+        Object.entries(customByTag).forEach(([tag, events]) => {
+            text += `[${tag}]\n`;
+            events.forEach(e => {
+                text += `${e.time}\n`;
+            });
+            text += "\n";
+        });
+
+        // Add verification code for import
+        const data = btoa(JSON.stringify(selectedCourses));
+        text += `\n||DATA:${data}||`;
+
         navigator.clipboard.writeText(text);
         setNotification({ message: "Routine copied to clipboard!", type: "success" });
+    };
+
+    const copyImageToClipboard = async () => {
+        if (!scheduleRef.current) return;
+        try {
+            const blob = await toBlob(scheduleRef.current, { cacheBust: true, backgroundColor: '#0f172a' });
+            if (!blob) throw new Error('Blob generation failed');
+            await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': blob })
+            ]);
+            setNotification({ message: "Image copied to clipboard!", type: "success" });
+        } catch (e) {
+            console.error(e);
+            setNotification({ message: "Failed to copy image.", type: "error" });
+        }
+    };
+
+    const handleImport = () => {
+        try {
+            const match = importText.match(/\|\|DATA:(.*)\|\|/);
+            if (match && match[1]) {
+                const json = atob(match[1]);
+                const parsed = JSON.parse(json);
+                setSelectedCourses(parsed);
+                setNotification({ message: "Schedule imported successfully!", type: "success" });
+                setShowImportModal(false);
+                setImportText('');
+            } else {
+                setNotification({ message: "Invalid format. Cannot find data block.", type: "error" });
+            }
+        } catch (e) {
+            setNotification({ message: "Failed to parse import data.", type: "error" });
+        }
     };
 
     const downloadImage = async () => {
@@ -269,10 +343,13 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
             days: dayString,
         };
 
-        handleCourseSelect(newEvent);
-        setCustomTag('');
-        setCustomDays([]);
-        setNotification({ message: "Custom event added!", type: "success" });
+        const success = handleCourseSelect(newEvent);
+
+        if (success) {
+            setCustomTag('');
+            setCustomDays([]);
+            setNotification({ message: "Custom event added!", type: "success" });
+        }
     };
 
     const toggleDay = (day: string) => {
@@ -292,6 +369,31 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                     >
                         <FaTimes size={12} />
                     </button>
+                </div>
+            )}
+
+            {/* Import Modal */}
+            {showImportModal && (
+                <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-[#0f172a] border border-white/10 rounded-xl p-6 w-full max-w-lg shadow-2xl animate-fade-in-down">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-white">Import Schedule</h3>
+                            <button onClick={() => setShowImportModal(false)} className="text-gray-400 hover:text-white"><FaTimes /></button>
+                        </div>
+                        <p className="text-sm text-gray-400 mb-4">Paste the text copied from another schedule to import it here. This will replace your current schedule.</p>
+                        <textarea
+                            value={importText}
+                            onChange={(e) => setImportText(e.target.value)}
+                            placeholder="Paste schedule text here..."
+                            className="w-full h-32 bg-black/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-indigo-500 mb-4 resize-none"
+                        />
+                        <div className="flex gap-3 justify-end">
+                            <button onClick={() => setShowImportModal(false)} className="px-4 py-2 hover:bg-white/5 rounded-lg text-sm text-gray-300">Cancel</button>
+                            <button onClick={handleImport} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold flex items-center gap-2">
+                                <FaFileImport /> Import
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -442,11 +544,18 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                 <div className="flex justify-between items-center mb-4 shrink-0">
                     <h2 className="text-xl font-bold text-white">Weekly Schedule</h2>
                     <div className="flex gap-2">
-                        <button onClick={copyRoutine} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white">
-                            <FaCopy /> Copy Text
+                        <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Import Schedule">
+                            <FaFileImport />
                         </button>
-                        <button onClick={downloadImage} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm transition-colors text-white">
-                            <FaDownload /> Save PNG
+                        <div className="h-4 w-[1px] bg-white/10 my-auto mx-1"></div>
+                        <button onClick={copyRoutine} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Copy Text">
+                            <FaCopy />
+                        </button>
+                        <button onClick={copyImageToClipboard} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Copy Image to Clipboard">
+                            <FaClipboard />
+                        </button>
+                        <button onClick={downloadImage} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm transition-colors text-white" title="Download PNG">
+                            <FaDownload />
                         </button>
                     </div>
                 </div>
@@ -526,9 +635,22 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                                 </div>
                                             )}
                                             <div className="font-bold leading-tight text-center truncate w-full">{item.course.courseCode}</div>
-                                            <div className="text-[11px] font-extrabold text-center truncate w-full opacity-90">{item.course.facultyCode}</div>
-                                            <div className="text-[9px] opacity-80 text-center truncate w-full">Sec {item.course.section}</div>
-                                            <div className="hidden sm:block text-[8px] opacity-60 text-center uppercase tracking-wide group-hover:opacity-100 transition-opacity truncate w-full">{item.course.room}</div>
+                                            {item.course.section === 'Custom' ? (
+                                                <div className="text-[9px] opacity-80 text-center truncate w-full mt-0.5">
+                                                    {(() => {
+                                                        const diff = (item.style.height.replace('%', '') as any) * TOTAL_MINS / 100;
+                                                        const h = Math.floor(diff / 60);
+                                                        const m = Math.round(diff % 60);
+                                                        return `${h > 0 ? h + ' hr ' : ''}${m > 0 ? m + ' min' : ''}`;
+                                                    })()}
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="text-[11px] font-extrabold text-center truncate w-full opacity-90">{item.course.facultyCode}</div>
+                                                    <div className="text-[9px] opacity-80 text-center truncate w-full">Sec {item.course.section}</div>
+                                                    <div className="hidden sm:block text-[8px] opacity-60 text-center uppercase tracking-wide group-hover:opacity-100 transition-opacity truncate w-full">{item.course.room}</div>
+                                                </>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
