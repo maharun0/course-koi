@@ -476,8 +476,14 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
 
             {/* Import Modal */}
             {showImportModal && (
-                <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
-                    <div className="bg-[#0f172a]/90 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative overflow-hidden">
+                <div
+                    className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in"
+                    onClick={() => setShowImportModal(false)}
+                >
+                    <div
+                        className="bg-[#0f172a]/90 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         {/* Glow effect */}
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
 
@@ -613,7 +619,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                 className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
                             />
                             <div className="flex flex-wrap gap-2 mt-2">
-                                {['Work', 'Gym', 'Study', 'Class', 'Bootcamp'].map(tag => (
+                                {['Work', 'Gym', 'Study', 'Class', 'Bootcamp', 'Contest'].map(tag => (
                                     <button
                                         key={tag}
                                         onClick={() => setCustomTag(tag)}
