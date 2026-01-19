@@ -12,7 +12,7 @@ interface ConflictWarningProps {
 export default function ConflictWarning({ selectedCourses }: ConflictWarningProps) {
     const conflicts = useMemo(() => {
         const schedules = selectedCourses
-            .map(c => parseCourseTime(c.time, c.id, c.courseCode, c.section))
+            .map(c => parseCourseTime(c.time, c.id, c.courseCode, c.section || ''))
             .filter((s): s is NonNullable<typeof s> => s !== null);
 
         return detectConflicts(schedules);
