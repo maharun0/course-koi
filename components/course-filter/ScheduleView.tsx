@@ -545,17 +545,17 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                     <h2 className="text-xl font-bold text-white">Weekly Schedule</h2>
                     <div className="flex gap-2">
                         <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Import Schedule">
-                            <FaFileImport />
+                            <FaFileImport /> <span className="hidden sm:inline">Import</span>
                         </button>
                         <div className="h-4 w-[1px] bg-white/10 my-auto mx-1"></div>
                         <button onClick={copyRoutine} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Copy Text">
-                            <FaCopy />
+                            <FaCopy /> <span className="hidden sm:inline">Copy Text</span>
                         </button>
                         <button onClick={copyImageToClipboard} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Copy Image to Clipboard">
-                            <FaClipboard />
+                            <FaClipboard /> <span className="hidden sm:inline">Copy Image</span>
                         </button>
                         <button onClick={downloadImage} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm transition-colors text-white" title="Download PNG">
-                            <FaDownload />
+                            <FaDownload /> <span className="hidden sm:inline">Download</span>
                         </button>
                     </div>
                 </div>
