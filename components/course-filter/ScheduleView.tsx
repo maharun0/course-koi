@@ -50,6 +50,49 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
     // Edit Mode State
     const [editingId, setEditingId] = useState<string | null>(null);
 
+    // --- STATS ENHANCEMENTS STATE ---
+    const [expandedTags, setExpandedTags] = useState<Record<string, boolean>>({});
+
+    const toggleTagExpand = (tag: string) => {
+        setExpandedTags(prev => ({ ...prev, [tag]: !prev[tag] }));
+    };
+
+    const handleDeleteTimeFrame = (tag: string, day: string, startTime: string, endTime: string) => {
+        const dayCharMap: Record<string, string> = { 'Mon': 'M', 'Tue': 'T', 'Wed': 'W', 'Thu': 'R', 'Fri': 'F', 'Sat': 'A', 'Sun': 'S' };
+        const charToRemove = dayCharMap[day];
+
+        const updated = selectedCourses.reduce((acc, c) => {
+            if (c.courseCode === tag && c.section === 'Custom') {
+                const parsed = parseCourseTime(c.time, c.id, c.courseCode, c.section);
+                // Check if this course has the specific time slot we are trying to delete
+                if (parsed && parsed.slots.some(s => s.day === day && Math.abs(s.start - parseInt(startTime)) < 5 && Math.abs(s.end - parseInt(endTime)) < 5)) {
+                    // Remove the day char
+                    const newDays = c.days.replace(charToRemove, '');
+                    if (newDays.length > 0) {
+                        const timePart = c.time.replace(/^[A-Z]+\s/, '');
+                        acc.push({ ...c, days: newDays, time: `${newDays} ${timePart}` });
+                    }
+                    // If empty, we don't push, so it's removed
+                    return acc;
+                }
+            }
+            acc.push(c);
+            return acc;
+        }, [] as CourseRow[]);
+
+        setSelectedCourses(updated);
+    };
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                cancelEdit();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [editingId, customTag, customDays]);
+
     // --- DRAG & DROP STATE ---
     interface DragState {
         isDragging: boolean;
@@ -1089,45 +1132,94 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                         </div>
 
                         {/* Tag Stats */}
-                        <div className="space-y-1 pt-2 border-t border-white/5">
-                            {Object.entries(tagStats.stats).map(([tag, mins]) => {
-                                // Check if we have unsaved time for this tag
-                                const isEditTag = tagStats.unsavedTag === tag && tagStats.unsavedMins > 0;
-
+                        <div className="space-y-2 pt-4 border-t border-white/5">
+                            {Object.entries(tagStats.stats).map(([tag, totalMins]) => {
+                                const isExpanded = expandedTags[tag];
                                 const formatDuration = (m: number) => {
-                                    const hours = Math.floor(m / 60);
-                                    const minutes = m % 60;
-                                    return `${hours > 0 ? hours + 'h ' : ''}${minutes > 0 ? minutes + 'm' : ''}`;
+                                    const h = Math.floor(m / 60);
+                                    const min = m % 60;
+                                    return `${h}h ${min > 0 ? min + 'm' : ''}`;
                                 };
 
+                                // Gather detailed rows for this tag
+                                const details: { day: string; start: number; end: number; duration: number }[] = [];
+                                selectedCourses.forEach(c => {
+                                    if (c.courseCode === tag && c.section === 'Custom') {
+                                        const p = parseCourseTime(c.time, c.id, c.courseCode, c.section);
+                                        if (p) {
+                                            p.slots.forEach(s => {
+                                                details.push({
+                                                    day: s.day,
+                                                    start: s.start,
+                                                    end: s.end,
+                                                    duration: s.end - s.start
+                                                });
+                                            });
+                                        }
+                                    }
+                                });
+                                // Sort details by day/time
+                                details.sort((a, b) => {
+                                    return (DAYS.indexOf(a.day) - DAYS.indexOf(b.day)) || (a.start - b.start);
+                                });
+
                                 return (
-                                    <div key={tag} className="flex justify-between items-center text-[11px] text-gray-400">
-                                        <span>{tag}</span>
-                                        <div className="flex gap-1">
-                                            <span>{formatDuration(mins)}</span>
-                                            {isEditTag && (
-                                                <span className="opacity-50 text-indigo-300">
-                                                    (+{formatDuration(tagStats.unsavedMins)})
-                                                </span>
-                                            )}
-                                        </div>
+                                    <div key={tag} className="border border-white/10 rounded-lg overflow-hidden bg-black/20">
+                                        <button
+                                            onClick={() => toggleTagExpand(tag)}
+                                            className="w-full flex justify-between items-center p-2 hover:bg-white/5 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {/* Arrow */}
+                                                <svg className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''} text-gray-400`} stroke="currentColor" fill="none" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                <span className="text-sm font-bold text-white tracking-wide">{tag}</span>
+                                            </div>
+                                            <span className="text-xs font-mono text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded">
+                                                {formatDuration(totalMins)}
+                                            </span>
+                                        </button>
+
+                                        {isExpanded && (
+                                            <div className="p-2 pt-0 animate-fade-in">
+                                                <table className="w-full text-[10px] text-gray-400">
+                                                    <thead>
+                                                        <tr className="border-b border-white/5 text-left text-gray-500">
+                                                            <th className="py-1 min-w-[30px]">Day</th>
+                                                            <th className="py-1">Time</th>
+                                                            <th className="py-1 text-right">Dur</th>
+                                                            <th className="py-1 w-6"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {details.map((d, idx) => (
+                                                            <tr key={idx} className="border-b border-white/5 last:border-0 hover:bg-white/5">
+                                                                <td className="py-1.5 font-bold text-gray-300">{d.day.substring(0, 3)}</td>
+                                                                <td className="py-1.5">
+                                                                    {minutesToTimeStr(d.start)} - {minutesToTimeStr(d.end)}
+                                                                </td>
+                                                                <td className="py-1.5 text-right font-mono">
+                                                                    {Math.floor(d.duration / 60)}h{d.duration % 60 > 0 ? ` ${d.duration % 60}m` : ''}
+                                                                </td>
+                                                                <td className="py-1.5 text-right">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDeleteTimeFrame(tag, d.day, d.start.toString(), d.end.toString());
+                                                                        }}
+                                                                        className="hover:text-red-400 transition-colors p-1"
+                                                                    >
+                                                                        <FaTimes size={10} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
-                            {/* If current tag is NEW (not in stats yet) show it purely as unsaved */}
-                            {tagStats.unsavedTag && !tagStats.stats[tagStats.unsavedTag] && tagStats.unsavedMins > 0 && (
-                                <div className="flex justify-between items-center text-[11px] text-gray-400">
-                                    <span>{tagStats.unsavedTag}</span>
-                                    <span className="opacity-50 text-indigo-300">
-                                        (+{(() => {
-                                            const m = tagStats.unsavedMins;
-                                            const hours = Math.floor(m / 60);
-                                            const minutes = m % 60;
-                                            return `${hours > 0 ? hours + 'h ' : ''}${minutes > 0 ? minutes + 'm' : ''}`;
-                                        })()})
-                                    </span>
-                                </div>
-                            )}
                         </div>
 
                         <div className="flex gap-2 mt-auto">
@@ -1257,6 +1349,12 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                                 ? 'opacity-50 border-dashed border-white/40 pointer-events-none'
                                                 : item.isGap ? 'z-0' : 'hover:scale-[1.02] hover:z-20'
                                                 }`}
+                                            onClick={() => {
+                                                // Handle Click for Edit if not dragging
+                                                if (item.course.section === 'Custom' && !item.isGap && !item.isPreview) {
+                                                    handleEditEvent(item.course);
+                                                }
+                                            }}
                                             onMouseDown={(e) => {
                                                 if (item.course.section === 'Custom' && !item.isGap && !item.isPreview) {
                                                     // Approx start/end for handler
