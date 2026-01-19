@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { CourseRow } from '@/types/course';
 import { parseCourseTime } from '@/utils/timeUtils';
-import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaFileExport, FaPaste, FaCloudUploadAlt, FaFileCode } from 'react-icons/fa';
+import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaFileExport, FaCloudUploadAlt, FaFileCode } from 'react-icons/fa';
 import { toPng, toBlob } from 'html-to-image';
 
 interface ScheduleViewProps {
