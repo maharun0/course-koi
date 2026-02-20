@@ -13,19 +13,19 @@ interface ScheduleViewProps {
 
 // Define the standard time slots requested
 const TIME_SLOTS = [
-    { label: "08:00 AM", start: 8 * 60, end: 9 * 60 + 30 },
-    { label: "09:40 AM", start: 9 * 60 + 40, end: 11 * 60 + 10 },
-    { label: "11:20 AM", start: 11 * 60 + 20, end: 12 * 60 + 50 },
-    { label: "01:00 PM", start: 13 * 60, end: 14 * 60 + 30 },
-    { label: "02:40 PM", start: 14 * 60 + 40, end: 16 * 60 + 10 },
-    { label: "04:20 PM", start: 16 * 60 + 20, end: 17 * 60 + 50 },
-    { label: "06:00 PM", start: 18 * 60, end: 19 * 60 + 30 },
+    { label: "08:00 AM", start: 8 * 60, end: 9 * 60 + 15 },
+    { label: "09:25 AM", start: 9 * 60 + 25, end: 10 * 60 + 40 },
+    { label: "10:50 AM", start: 10 * 60 + 50, end: 12 * 60 + 5 },
+    { label: "12:15 PM", start: 12 * 60 + 15, end: 13 * 60 + 30 },
+    { label: "01:40 PM", start: 13 * 60 + 40, end: 14 * 60 + 55 },
+    { label: "03:05 PM", start: 15 * 60 + 5, end: 16 * 60 + 20 },
+    { label: "04:30 PM", start: 16 * 60 + 30, end: 17 * 60 + 45 },
 ];
 
 const DAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 const START_OF_DAY = 8 * 60; // 08:00 AM
-const END_OF_DAY = 19 * 60 + 30; // 07:30 PM (End of last slot)
+const END_OF_DAY = 17 * 60 + 45; // 05:45 PM (End of last slot)
 const TOTAL_MINS = END_OF_DAY - START_OF_DAY;
 
 export default function ScheduleView({ courses, allCourses }: ScheduleViewProps) {

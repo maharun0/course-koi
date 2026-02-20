@@ -41,14 +41,27 @@ export function parseCourseTime(timeStr: string, courseId: string, courseCode: s
   if (!timeStr || timeStr === 'TBA') return null;
 
   try {
-    // 1. Separate Days part from Time Range part
-    // Regex matches the first digit to split days from time
-    // e.g. "TR 08:00 AM - 09:30 AM"
     const match = timeStr.match(/^([A-Z]+)\s+(.*)$/);
     if (!match) return null;
 
     const daysPart = match[1];
-    const timeRange = match[2];
+    let timeRange = match[2];
+
+    if (section !== 'Custom') {
+      const normalized = timeRange.replace(/\s+/g, '').toUpperCase();
+      const RAMADAN_MAPPING_NO_SPACE: Record<string, string> = {
+        "08:00AM-09:30AM": "08:00 AM - 09:15 AM",
+        "09:40AM-11:10AM": "09:25 AM - 10:40 AM",
+        "11:20AM-12:50PM": "10:50 AM - 12:05 PM",
+        "01:00PM-02:30PM": "12:15 PM - 01:30 PM",
+        "02:40PM-04:10PM": "01:40 PM - 02:55 PM",
+        "04:20PM-05:50PM": "03:05 PM - 04:20 PM",
+        "06:00PM-07:30PM": "04:30 PM - 05:45 PM"
+      };
+      if (RAMADAN_MAPPING_NO_SPACE[normalized]) {
+        timeRange = RAMADAN_MAPPING_NO_SPACE[normalized];
+      }
+    }
 
     const days: string[] = [];
     // Iterate 1 char at a time
