@@ -12,7 +12,18 @@ interface ScheduleViewProps {
 }
 
 // Define the standard time slots requested
-const TIME_SLOTS = [
+const REGULAR_TIME_SLOTS = [
+    { label: "08:00 AM", start: 8 * 60, end: 9 * 60 + 30 },
+    { label: "09:40 AM", start: 9 * 60 + 40, end: 11 * 60 + 10 },
+    { label: "11:20 AM", start: 11 * 60 + 20, end: 12 * 60 + 50 },
+    { label: "01:00 PM", start: 13 * 60, end: 14 * 60 + 30 },
+    { label: "02:40 PM", start: 14 * 60 + 40, end: 16 * 60 + 10 },
+    { label: "04:20 PM", start: 16 * 60 + 20, end: 17 * 60 + 50 },
+    { label: "06:00 PM", start: 18 * 60, end: 19 * 60 + 30 },
+];
+const REGULAR_END_OF_DAY = 19 * 60 + 30;
+
+const RAMADAN_TIME_SLOTS = [
     { label: "08:00 AM", start: 8 * 60, end: 9 * 60 + 15 },
     { label: "09:25 AM", start: 9 * 60 + 25, end: 10 * 60 + 40 },
     { label: "10:50 AM", start: 10 * 60 + 50, end: 12 * 60 + 5 },
@@ -21,14 +32,18 @@ const TIME_SLOTS = [
     { label: "03:05 PM", start: 15 * 60 + 5, end: 16 * 60 + 20 },
     { label: "04:30 PM", start: 16 * 60 + 30, end: 17 * 60 + 45 },
 ];
+const RAMADAN_END_OF_DAY = 17 * 60 + 45; // 05:45 PM (End of last slot)
 
 const DAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 const START_OF_DAY = 8 * 60; // 08:00 AM
-const END_OF_DAY = 17 * 60 + 45; // 05:45 PM (End of last slot)
-const TOTAL_MINS = END_OF_DAY - START_OF_DAY;
 
 export default function ScheduleView({ courses, allCourses }: ScheduleViewProps) {
+    const [isRamadanMode, setIsRamadanMode] = useState(false);
+
+    const TIME_SLOTS = isRamadanMode ? RAMADAN_TIME_SLOTS : REGULAR_TIME_SLOTS;
+    const END_OF_DAY = isRamadanMode ? RAMADAN_END_OF_DAY : REGULAR_END_OF_DAY;
+    const TOTAL_MINS = END_OF_DAY - START_OF_DAY;
     const [selectedCourses, setSelectedCourses] = useState<CourseRow[]>([]);
     const [sidebarTab, setSidebarTab] = useState<'courses' | 'custom'>('courses');
     const [searchTerm, setSearchTerm] = useState('');
@@ -63,7 +78,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
 
         const updated = selectedCourses.reduce((acc, c) => {
             if (c.courseCode === tag && c.section === 'Custom') {
-                const parsed = parseCourseTime(c.time, c.id, c.courseCode, c.section);
+                const parsed = parseCourseTime(c.time, c.id, c.courseCode, c.section, isRamadanMode);
                 // Check if this course has the specific time slot we are trying to delete
                 if (parsed && parsed.slots.some(s => s.day === day && Math.abs(s.start - parseInt(startTime)) < 5 && Math.abs(s.end - parseInt(endTime)) < 5)) {
                     // Remove the day char
@@ -317,8 +332,18 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                 console.error("Failed to load schedule", e);
             }
         }
+        const savedRamadan = localStorage.getItem('courseKoi_ramadanMode');
+        if (savedRamadan) {
+            setIsRamadanMode(savedRamadan === 'true');
+        }
         setIsLoaded(true);
     }, []);
+
+    const handleRamadanModeToggle = () => {
+        const newVal = !isRamadanMode;
+        setIsRamadanMode(newVal);
+        localStorage.setItem('courseKoi_ramadanMode', String(newVal));
+    };
 
     // Save to LocalStorage
     useEffect(() => {
@@ -382,7 +407,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
             isCustom ? c.id !== course.id : c.courseCode !== course.courseCode
         );
 
-        const newSchedule = parseCourseTime(course.time, course.id, course.courseCode, course.section || '');
+        const newSchedule = parseCourseTime(course.time, course.id, course.courseCode, course.section || '', isRamadanMode);
 
         if (!newSchedule) {
             setNotification({ message: "Invalid time format.", type: "error" });
@@ -393,7 +418,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         let conflictReason = "";
 
         for (const existing of coursesToCheck) {
-            const existingSchedule = parseCourseTime(existing.time, existing.id, existing.courseCode, existing.section || '');
+            const existingSchedule = parseCourseTime(existing.time, existing.id, existing.courseCode, existing.section || '', isRamadanMode);
             if (!existingSchedule) continue;
 
             for (const newSlot of newSchedule.slots) {
@@ -510,7 +535,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
 
         coursesToRender.forEach((course, idx) => {
             const isPreview = course.id === 'preview-custom';
-            const schedule = parseCourseTime(course.time, course.id, course.courseCode, course.section || '');
+            const schedule = parseCourseTime(course.time, course.id, course.courseCode, course.section || '', isRamadanMode);
             if (!schedule) return;
 
             // Determine Color
@@ -596,7 +621,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         }
 
         return temp;
-    }, [selectedCourses, previewCourse, hoverState, dragState.isDragging]);
+    }, [selectedCourses, previewCourse, hoverState, dragState.isDragging, isRamadanMode]);
 
 
 
@@ -608,7 +633,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         // 1. Existing Courses
         selectedCourses.forEach(c => {
             if (c.section !== 'Custom') return;
-            const sched = parseCourseTime(c.time, c.id, c.courseCode, c.section);
+            const sched = parseCourseTime(c.time, c.id, c.courseCode, c.section, isRamadanMode);
             if (!sched) return;
 
             // Calculate duration in minutes (per occurrence * number of occurrences is handled by slots)
@@ -638,7 +663,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         }
 
         return { stats, unsavedMins, unsavedTag };
-    }, [selectedCourses, customTag, customDays, customStartTime, customEndTime, sidebarTab]);
+    }, [selectedCourses, customTag, customDays, customStartTime, customEndTime, sidebarTab, isRamadanMode]);
 
     // --- ACTIONS ---
 
@@ -1145,7 +1170,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                 const details: { day: string; start: number; end: number; duration: number }[] = [];
                                 selectedCourses.forEach(c => {
                                     if (c.courseCode === tag && c.section === 'Custom') {
-                                        const p = parseCourseTime(c.time, c.id, c.courseCode, c.section);
+                                        const p = parseCourseTime(c.time, c.id, c.courseCode, c.section, isRamadanMode);
                                         if (p) {
                                             p.slots.forEach(s => {
                                                 details.push({
@@ -1247,6 +1272,13 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                 <div className="flex justify-between items-center mb-4 shrink-0">
                     <h2 className="text-xl font-bold text-white">Weekly Schedule</h2>
                     <div className="flex gap-2">
+                        <button
+                            onClick={handleRamadanModeToggle}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all border ${isRamadanMode ? 'bg-amber-600 text-white border-amber-500 shadow-[0_0_10px_rgba(217,119,6,0.5)]' : 'bg-black/20 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'} flex items-center justify-center`}
+                            title="Toggle Ramadan Mode"
+                        >
+                            🌙 Ramadan
+                        </button>
                         <div className="relative z-50">
                             <button
                                 onClick={() => setExportExpanded(!exportExpanded)}

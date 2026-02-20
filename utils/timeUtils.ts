@@ -37,7 +37,7 @@ export const DayToIndex: Record<string, number> = {
  * Handles multiple days and time ranges with AM/PM.
  * Assumes format: "[Days] [Start Time] - [End Time]"
  */
-export function parseCourseTime(timeStr: string, courseId: string, courseCode: string, section: string): ParsedSchedule | null {
+export function parseCourseTime(timeStr: string, courseId: string, courseCode: string, section: string, isRamadanMode: boolean = false): ParsedSchedule | null {
   if (!timeStr || timeStr === 'TBA') return null;
 
   try {
@@ -47,7 +47,7 @@ export function parseCourseTime(timeStr: string, courseId: string, courseCode: s
     const daysPart = match[1];
     let timeRange = match[2];
 
-    if (section !== 'Custom') {
+    if (section !== 'Custom' && isRamadanMode) {
       const normalized = timeRange.replace(/\s+/g, '').toUpperCase();
       const RAMADAN_MAPPING_NO_SPACE: Record<string, string> = {
         "08:00AM-09:30AM": "08:00 AM - 09:15 AM",
