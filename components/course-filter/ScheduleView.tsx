@@ -68,6 +68,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
 
     const [notification, setNotification] = useState<{ message: string; type: 'error' | 'success' } | null>(null);
     const scheduleRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [exportExpanded, setExportExpanded] = useState(false);
@@ -363,6 +364,26 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
             localStorage.setItem('courseKoi_schedule', JSON.stringify(selectedCourses));
         }
     }, [selectedCourses, isLoaded]);
+
+    // Initial Scroll to ~7:30 AM
+    useEffect(() => {
+        if (isLoaded && scrollContainerRef.current && scheduleRef.current) {
+            // 8:00 AM lies exactly at (8 * 60) mins.
+            // We want the viewport to show a little bit of the hour before 8:00 AM for padding/context.
+            // So let's scroll so that 7:30 AM is at the top.
+            const targetMins = 8 * 60; // 7:30 AM
+            const pct = targetMins / TOTAL_MINS;
+
+            // Wait briefly to allow `min-height` css to compute its real pixels matching DOM paints
+            setTimeout(() => {
+                if (scheduleRef.current && scrollContainerRef.current) {
+                    const gridHeightPx = scheduleRef.current.clientHeight;
+                    // Scroll exactly equal to that top %.
+                    scrollContainerRef.current.scrollTo({ top: gridHeightPx * pct, behavior: 'smooth' });
+                }
+            }, 100);
+        }
+    }, [isLoaded, TOTAL_MINS]);
 
     // Color Migration & Cleanup Effect
     // Ensures all courses have a color assigned, and cleans data structure if needed
@@ -1334,7 +1355,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                 </div>
 
                 {/* The Scrollable Wrapper */}
-                <div className="flex-1 w-full h-full overflow-y-auto hide-scrollbar scroll-smooth rounded-lg border border-white/5">
+                <div ref={scrollContainerRef} className="flex-1 w-full h-full overflow-y-auto hide-scrollbar scroll-smooth rounded-lg border border-white/5">
                     {/* The Grid Container - Capture Target */}
                     <div ref={scheduleRef} className="p-2 bg-[#0f172a] min-h-[1440px] sm:min-h-[1800px] flex flex-col relative w-full">
                         <div className="flex-1 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-white/5 rounded-lg overflow-hidden border border-white/10 relative">
