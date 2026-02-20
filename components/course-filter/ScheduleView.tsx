@@ -162,9 +162,14 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         // Clamp
         totalMins = Math.max(START_OF_DAY, Math.min(END_OF_DAY, totalMins));
 
-        const h = Math.floor(totalMins / 60);
-        const m = Math.round(totalMins % 60);
-        const ampm = h >= 12 ? 'PM' : 'AM';
+        let h = Math.floor(totalMins / 60);
+        let m = Math.round(totalMins % 60);
+        if (m === 60) {
+            h += 1;
+            m = 0;
+        }
+
+        const ampm = h >= 12 && h < 24 ? 'PM' : 'AM';
         const h12 = h % 12 || 12;
         return `${h12.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`;
     };
@@ -1482,8 +1487,12 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                                                 <div className="text-[10px] opacity-80 text-center truncate w-full mt-0.5">
                                                                     {(() => {
                                                                         const diff = (parseFloat(item.style.height)) * TOTAL_MINS / 100;
-                                                                        const h = Math.floor(diff / 60);
-                                                                        const m = Math.round(diff % 60);
+                                                                        let h = Math.floor(diff / 60);
+                                                                        let m = Math.round(diff % 60);
+                                                                        if (m === 60) {
+                                                                            h += 1;
+                                                                            m = 0;
+                                                                        }
                                                                         return `${h > 0 ? h + ' hr ' : ''}${m > 0 ? m + ' min' : ''}`;
                                                                     })()}
                                                                 </div>
