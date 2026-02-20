@@ -49,17 +49,41 @@ export function parseCourseTime(timeStr: string, courseId: string, courseCode: s
 
     if (section !== 'Custom' && isRamadanMode) {
       const normalized = timeRange.replace(/\s+/g, '').toUpperCase();
-      const RAMADAN_MAPPING_NO_SPACE: Record<string, string> = {
-        "08:00AM-09:30AM": "08:00 AM - 09:15 AM",
-        "09:40AM-11:10AM": "09:25 AM - 10:40 AM",
-        "11:20AM-12:50PM": "10:50 AM - 12:05 PM",
-        "01:00PM-02:30PM": "12:15 PM - 01:30 PM",
-        "02:40PM-04:10PM": "01:40 PM - 02:55 PM",
-        "04:20PM-05:50PM": "03:05 PM - 04:20 PM",
-        "06:00PM-07:30PM": "04:30 PM - 05:45 PM"
+      const RAMADAN_STARTS: Record<string, string> = {
+        "08:00AM": "08:00 AM",
+        "09:40AM": "09:25 AM",
+        "11:20AM": "10:50 AM",
+        "01:00PM": "12:15 PM",
+        "02:40PM": "01:40 PM",
+        "04:20PM": "03:05 PM",
+        "06:00PM": "04:30 PM"
       };
-      if (RAMADAN_MAPPING_NO_SPACE[normalized]) {
-        timeRange = RAMADAN_MAPPING_NO_SPACE[normalized];
+
+      const RAMADAN_ENDS: Record<string, string> = {
+        "09:30AM": "09:15 AM",
+        "11:10AM": "10:40 AM",
+        "12:50PM": "12:05 PM",
+        "02:30PM": "01:30 PM",
+        "04:10PM": "02:55 PM",
+        "05:50PM": "04:20 PM",
+        "07:30PM": "05:45 PM"
+      };
+
+      const [initStart, initEnd] = normalized.split('-');
+      if (initStart && initEnd) {
+        const newStart = RAMADAN_STARTS[initStart];
+        const newEnd = RAMADAN_ENDS[initEnd];
+
+        if (newStart && newEnd) {
+          timeRange = `${newStart} - ${newEnd}`;
+        } else {
+          // Fallback logic if we only match one side.
+          // Ensure we restore the space before AM/PM so parseTime doesn't break
+          const fallbackStart = newStart || initStart.replace(/(AM|PM)/i, ' $1');
+          const fallbackEnd = newEnd || initEnd.replace(/(AM|PM)/i, ' $1');
+
+          timeRange = `${fallbackStart} - ${fallbackEnd}`;
+        }
       }
     }
 
