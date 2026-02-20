@@ -1368,7 +1368,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                             {/* 1. Time Column */}
                             <div className="relative h-full border-r border-white/10 bg-black/20">
                                 {/* Header */}
-                                <div className="h-8 border-b border-white/10 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-black/10 absolute w-full top-0 z-10">Time</div>
+                                <div className="h-8 border-b border-white/10 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-black/10 sticky w-full top-0 z-40 backdrop-blur-md">Time</div>
 
                                 {/* Time Labels */}
                                 <div className="absolute top-8 bottom-0 w-full">
@@ -1391,7 +1391,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                             {DAYS.map(day => (
                                 <div key={day} className="relative h-full border-r border-white/10 last:border-r-0">
                                     {/* Header */}
-                                    <div className="h-8 border-b border-white/10 flex items-center justify-center text-xs font-bold text-gray-200 bg-black/20 absolute w-full top-0 z-10">
+                                    <div className="h-8 border-b border-white/10 flex items-center justify-center text-xs font-bold text-gray-200 bg-black/20 sticky w-full top-0 z-40 backdrop-blur-md">
                                         {day}
                                     </div>
 
