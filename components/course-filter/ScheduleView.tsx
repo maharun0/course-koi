@@ -36,14 +36,26 @@ const RAMADAN_END_OF_DAY = 17 * 60 + 45; // 05:45 PM (End of last slot)
 
 const DAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-const START_OF_DAY = 8 * 60; // 08:00 AM
+const START_OF_DAY = 0; // 12:00 AM / 00:00
+const END_OF_DAY = 24 * 60; // 1440
+const TOTAL_MINS = 24 * 60; // 1440
+
+const HOURLY_SLOTS = Array.from({ length: 25 }, (_, i) => {
+    const hours = i;
+    const ampm = hours >= 12 && hours < 24 ? 'PM' : 'AM';
+    const h12 = hours % 12 || 12;
+    return {
+        label: hours === 24 ? '12:00 AM' : `${h12.toString().padStart(2, '0')}:00 ${ampm}`,
+        start: hours * 60,
+    };
+});
 
 export default function ScheduleView({ courses, allCourses }: ScheduleViewProps) {
     const [isRamadanMode, setIsRamadanMode] = useState(false);
 
     const TIME_SLOTS = isRamadanMode ? RAMADAN_TIME_SLOTS : REGULAR_TIME_SLOTS;
     const END_OF_DAY = isRamadanMode ? RAMADAN_END_OF_DAY : REGULAR_END_OF_DAY;
-    const TOTAL_MINS = END_OF_DAY - START_OF_DAY;
+
     const [selectedCourses, setSelectedCourses] = useState<CourseRow[]>([]);
     const [sidebarTab, setSidebarTab] = useState<'courses' | 'custom'>('custom');
     const [searchTerm, setSearchTerm] = useState('');
@@ -1321,166 +1333,169 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                     </div>
                 </div>
 
-                {/* The Grid Container - Capture Target */}
-                <div ref={scheduleRef} className="p-2 bg-[#0f172a] rounded-lg border border-white/5 w-full h-full flex flex-col">
-                    <div className="flex-1 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-white/5 rounded-lg overflow-hidden border border-white/10 h-full relative">
+                {/* The Scrollable Wrapper */}
+                <div className="flex-1 w-full h-full overflow-y-auto hide-scrollbar scroll-smooth rounded-lg border border-white/5">
+                    {/* The Grid Container - Capture Target */}
+                    <div ref={scheduleRef} className="p-2 bg-[#0f172a] min-h-[1440px] sm:min-h-[1800px] flex flex-col relative w-full">
+                        <div className="flex-1 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-white/5 rounded-lg overflow-hidden border border-white/10 relative">
 
-                        {/* 1. Time Column */}
-                        <div className="relative h-full border-r border-white/10 bg-black/20">
-                            {/* Header */}
-                            <div className="h-8 border-b border-white/10 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-black/10 absolute w-full top-0 z-10">Time</div>
-
-                            {/* Time Labels */}
-                            <div className="absolute top-8 bottom-0 w-full">
-                                {TIME_SLOTS.map((slot, i) => {
-                                    const { top } = getPosition(slot.start, 0); // Height doesn't matter for label pos
-                                    return (
-                                        <div
-                                            key={i}
-                                            className="absolute w-full text-right pr-2 text-[10px] text-gray-400 font-mono -translate-y-1/2 flex items-center justify-end"
-                                            style={{ top }}
-                                        >
-                                            <span className="bg-[#0f172a]/80 px-1 rounded">{slot.label}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* 2. Day Columns */}
-                        {DAYS.map(day => (
-                            <div key={day} className="relative h-full border-r border-white/10 last:border-r-0">
+                            {/* 1. Time Column */}
+                            <div className="relative h-full border-r border-white/10 bg-black/20">
                                 {/* Header */}
-                                <div className="h-8 border-b border-white/10 flex items-center justify-center text-xs font-bold text-gray-200 bg-black/20 absolute w-full top-0 z-10">
-                                    {day}
-                                </div>
+                                <div className="h-8 border-b border-white/10 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-black/10 absolute w-full top-0 z-10">Time</div>
 
-                                {/* Content Area */}
-                                <div
-                                    className="absolute top-8 bottom-0 w-full"
-                                    onMouseMove={(e) => handleGridMouseMove(e, day)}
-                                    onMouseLeave={handleGridMouseLeave}
-                                >
-                                    {/* Background Grid Lines */}
-                                    {TIME_SLOTS.map((slot, i) => {
-                                        const { top } = getPosition(slot.start, 0);
+                                {/* Time Labels */}
+                                <div className="absolute top-8 bottom-0 w-full">
+                                    {HOURLY_SLOTS.map((slot, i) => {
+                                        const { top } = getPosition(slot.start, 0); // Height doesn't matter for label pos
                                         return (
                                             <div
-                                                key={`line-${i}`}
-                                                className="absolute w-full border-t border-white/5 pointer-events-none"
+                                                key={i}
+                                                className="absolute w-full text-right pr-2 text-[10px] text-gray-400 font-mono -translate-y-1/2 flex items-center justify-end"
                                                 style={{ top }}
-                                            />
+                                            >
+                                                <span className="bg-[#0f172a]/80 px-1 rounded">{slot.label}</span>
+                                            </div>
                                         );
                                     })}
+                                </div>
+                            </div>
 
-                                    {/* Courses */}
-                                    {daySchedules[day]?.map((item, i) => (
-                                        <div
-                                            key={i}
-                                            className={`absolute inset-x-0 mx-0.5 rounded shadow-lg p-1 text-xs text-white border border-white/10 flex flex-col justify-center items-center transition-all cursor-default group overflow-hidden ${item.color} ${item.isPreview
-                                                ? 'opacity-50 border-dashed border-white/40 pointer-events-none'
-                                                : item.isGap ? 'z-0' : 'hover:scale-[1.02] hover:z-20'
-                                                }`}
-                                            onClick={() => {
-                                                // Handle Click for Edit if not dragging
-                                                if (item.course.section === 'Custom' && !item.isGap && !item.isPreview) {
-                                                    handleEditEvent(item.course);
-                                                }
-                                            }}
-                                            onMouseDown={(e) => {
-                                                if (item.course.section === 'Custom' && !item.isGap && !item.isPreview) {
-                                                    // Approx start/end for handler
-                                                    const t = parseFloat(item.style.top);
-                                                    const h = parseFloat(item.style.height);
-                                                    const start = START_OF_DAY + (t / 100) * TOTAL_MINS;
-                                                    const end = start + (h / 100) * TOTAL_MINS;
-                                                    handleDragStart(e, item.course, day, { start, end }, item.style.top, item.style.height, 'move');
-                                                }
-                                            }}
-                                            style={{
-                                                top: item.style.top,
-                                                height: item.style.height,
-                                                minHeight: '20px' // Ensure visibility for short blocks
-                                            }}
-                                        >
-                                            {item.isGap ? (
-                                                <div className="flex flex-col items-center justify-center text-[10px] font-mono tracking-wider opacity-70 leading-tight">
-                                                    <span className="font-bold uppercase text-[9px] mb-0.5">Gap</span>
-                                                    <span>{item.label}</span>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    {!item.isPreview && (
-                                                        <div
-                                                            className="absolute top-0.5 right-0.5 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-30"
-                                                        >
-                                                            {/* Edit Button */}
-                                                            {item.course.section === 'Custom' && (
+                            {/* 2. Day Columns */}
+                            {DAYS.map(day => (
+                                <div key={day} className="relative h-full border-r border-white/10 last:border-r-0">
+                                    {/* Header */}
+                                    <div className="h-8 border-b border-white/10 flex items-center justify-center text-xs font-bold text-gray-200 bg-black/20 absolute w-full top-0 z-10">
+                                        {day}
+                                    </div>
+
+                                    {/* Content Area */}
+                                    <div
+                                        className="absolute top-8 bottom-0 w-full"
+                                        onMouseMove={(e) => handleGridMouseMove(e, day)}
+                                        onMouseLeave={handleGridMouseLeave}
+                                    >
+                                        {/* Background Grid Lines */}
+                                        {HOURLY_SLOTS.map((slot, i) => {
+                                            const { top } = getPosition(slot.start, 0);
+                                            return (
+                                                <div
+                                                    key={`line-${i}`}
+                                                    className="absolute w-full border-t border-white/5 pointer-events-none"
+                                                    style={{ top }}
+                                                />
+                                            );
+                                        })}
+
+                                        {/* Courses */}
+                                        {daySchedules[day]?.map((item, i) => (
+                                            <div
+                                                key={i}
+                                                className={`absolute inset-x-0 mx-0.5 rounded shadow-lg p-1 text-xs text-white border border-white/10 flex flex-col justify-center items-center transition-all cursor-default group overflow-hidden ${item.color} ${item.isPreview
+                                                    ? 'opacity-50 border-dashed border-white/40 pointer-events-none'
+                                                    : item.isGap ? 'z-0' : 'hover:scale-[1.02] hover:z-20'
+                                                    }`}
+                                                onClick={() => {
+                                                    // Handle Click for Edit if not dragging
+                                                    if (item.course.section === 'Custom' && !item.isGap && !item.isPreview) {
+                                                        handleEditEvent(item.course);
+                                                    }
+                                                }}
+                                                onMouseDown={(e) => {
+                                                    if (item.course.section === 'Custom' && !item.isGap && !item.isPreview) {
+                                                        // Approx start/end for handler
+                                                        const t = parseFloat(item.style.top);
+                                                        const h = parseFloat(item.style.height);
+                                                        const start = START_OF_DAY + (t / 100) * TOTAL_MINS;
+                                                        const end = start + (h / 100) * TOTAL_MINS;
+                                                        handleDragStart(e, item.course, day, { start, end }, item.style.top, item.style.height, 'move');
+                                                    }
+                                                }}
+                                                style={{
+                                                    top: item.style.top,
+                                                    height: item.style.height,
+                                                    minHeight: '20px' // Ensure visibility for short blocks
+                                                }}
+                                            >
+                                                {item.isGap ? (
+                                                    <div className="flex flex-col items-center justify-center text-[10px] font-mono tracking-wider opacity-70 leading-tight">
+                                                        <span className="font-bold uppercase text-[9px] mb-0.5">Gap</span>
+                                                        <span>{item.label}</span>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        {!item.isPreview && (
+                                                            <div
+                                                                className="absolute top-0.5 right-0.5 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-30"
+                                                            >
+                                                                {/* Edit Button */}
+                                                                {item.course.section === 'Custom' && (
+                                                                    <div
+                                                                        className="p-0.5 cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleEditEvent(item.course);
+                                                                        }}
+                                                                        title="Edit Event"
+                                                                    >
+                                                                        {/* Simple Pen Icon manually since we might replace icons */}
+                                                                        <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 512 512" height="8" width="8" xmlns="http://www.w3.org/2000/svg"><path d="M497.9 142.1l-46.1 46.1c-4.7 4.7-12.3 4.7-17 0l-111-111c-4.7-4.7-4.7-12.3 0-17l46.1-46.1c18.7-18.7 49.1-18.7 67.9 0l60.1 60.1c18.8 18.7 18.8 49.1 0 67.9zM284.2 99.8L21.6 362.4.4 483.9c-2.9 16.4 11.4 30.6 27.8 27.8l121.5-21.3 262.6-262.6c4.7-4.7 4.7-12.3 0-17l-111-111c-4.8-4.7-12.4-4.7-17.1 0zM124.1 339.9c-5.5-5.5-5.5-14.3 0-19.8l154-154c5.5-5.5 14.3-5.5 19.8 0s5.5 14.3 0 19.8l-154 154c-5.5 5.5-14.3 5.5-19.8 0zM88 424h48v36.3l-64.5 11.3-31.1-31.1L51.7 376H88v48z"></path></svg>
+                                                                    </div>
+                                                                )}
+                                                                {/* Delete Button */}
                                                                 <div
                                                                     className="p-0.5 cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        handleEditEvent(item.course);
+                                                                        handleCourseSelect(item.course);
                                                                     }}
-                                                                    title="Edit Event"
+                                                                    title="Remove from schedule"
                                                                 >
-                                                                    {/* Simple Pen Icon manually since we might replace icons */}
-                                                                    <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 512 512" height="8" width="8" xmlns="http://www.w3.org/2000/svg"><path d="M497.9 142.1l-46.1 46.1c-4.7 4.7-12.3 4.7-17 0l-111-111c-4.7-4.7-4.7-12.3 0-17l46.1-46.1c18.7-18.7 49.1-18.7 67.9 0l60.1 60.1c18.8 18.7 18.8 49.1 0 67.9zM284.2 99.8L21.6 362.4.4 483.9c-2.9 16.4 11.4 30.6 27.8 27.8l121.5-21.3 262.6-262.6c4.7-4.7 4.7-12.3 0-17l-111-111c-4.8-4.7-12.4-4.7-17.1 0zM124.1 339.9c-5.5-5.5-5.5-14.3 0-19.8l154-154c5.5-5.5 14.3-5.5 19.8 0s5.5 14.3 0 19.8l-154 154c-5.5 5.5-14.3 5.5-19.8 0zM88 424h48v36.3l-64.5 11.3-31.1-31.1L51.7 376H88v48z"></path></svg>
+                                                                    <FaTimes size={8} />
                                                                 </div>
-                                                            )}
-                                                            {/* Delete Button */}
-                                                            <div
-                                                                className="p-0.5 cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCourseSelect(item.course);
-                                                                }}
-                                                                title="Remove from schedule"
-                                                            >
-                                                                <FaTimes size={8} />
                                                             </div>
-                                                        </div>
-                                                    )}
-                                                    <div className="font-bold leading-tight text-center truncate w-full">{item.course.courseCode}</div>
-                                                    {item.course.section === 'Custom' ? (
-                                                        <div className="flex flex-col items-center w-full">
-                                                            <div className="text-[10px] opacity-80 text-center truncate w-full mt-0.5">
-                                                                {(() => {
-                                                                    const diff = (parseFloat(item.style.height)) * TOTAL_MINS / 100;
-                                                                    const h = Math.floor(diff / 60);
-                                                                    const m = Math.round(diff % 60);
-                                                                    return `${h > 0 ? h + ' hr ' : ''}${m > 0 ? m + ' min' : ''}`;
-                                                                })()}
+                                                        )}
+                                                        <div className="font-bold leading-tight text-center truncate w-full">{item.course.courseCode}</div>
+                                                        {item.course.section === 'Custom' ? (
+                                                            <div className="flex flex-col items-center w-full">
+                                                                <div className="text-[10px] opacity-80 text-center truncate w-full mt-0.5">
+                                                                    {(() => {
+                                                                        const diff = (parseFloat(item.style.height)) * TOTAL_MINS / 100;
+                                                                        const h = Math.floor(diff / 60);
+                                                                        const m = Math.round(diff % 60);
+                                                                        return `${h > 0 ? h + ' hr ' : ''}${m > 0 ? m + ' min' : ''}`;
+                                                                    })()}
+                                                                </div>
+                                                                <div className="text-[11.5px] font-semibold opacity-90 text-center truncate w-full mt-2.5">
+                                                                    {(() => {
+                                                                        const top = parseFloat(item.style.top);
+                                                                        const height = parseFloat(item.style.height);
+                                                                        const s = START_OF_DAY + (top / 100) * TOTAL_MINS;
+                                                                        const e = s + (height / 100) * TOTAL_MINS;
+                                                                        return `${minutesToTimeStr(s)} - ${minutesToTimeStr(e)}`;
+                                                                    })()}
+                                                                </div>
                                                             </div>
-                                                            <div className="text-[11.5px] font-semibold opacity-90 text-center truncate w-full mt-2.5">
-                                                                {(() => {
-                                                                    const top = parseFloat(item.style.top);
-                                                                    const height = parseFloat(item.style.height);
-                                                                    const s = START_OF_DAY + (top / 100) * TOTAL_MINS;
-                                                                    const e = s + (height / 100) * TOTAL_MINS;
-                                                                    return `${minutesToTimeStr(s)} - ${minutesToTimeStr(e)}`;
-                                                                })()}
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <div className="text-[11px] font-extrabold text-center truncate w-full opacity-90">{item.course.facultyCode}</div>
-                                                            <div className="text-[9px] opacity-80 text-center truncate w-full">Sec {item.course.section}</div>
-                                                            <div className="hidden sm:block text-[8px] opacity-60 text-center uppercase tracking-wide group-hover:opacity-100 transition-opacity truncate w-full">{item.course.room}</div>
-                                                        </>
-                                                    )}
-                                                </>
-                                            )}
-                                        </div>
-                                    ))}
+                                                        ) : (
+                                                            <>
+                                                                <div className="text-[11px] font-extrabold text-center truncate w-full opacity-90">{item.course.facultyCode}</div>
+                                                                <div className="text-[9px] opacity-80 text-center truncate w-full">Sec {item.course.section}</div>
+                                                                <div className="hidden sm:block text-[8px] opacity-60 text-center uppercase tracking-wide group-hover:opacity-100 transition-opacity truncate w-full">{item.course.room}</div>
+                                                            </>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
 
-                    {/* Footer Logo for Screenshot */}
-                    <div className="text-right mt-2 text-gray-400 text-xs font-mono font-semibold opacity-90 shrink-0">
-                        Generated by course-koi.vercel.app
+                        {/* Footer Logo for Screenshot */}
+                        <div className="text-right mt-2 text-gray-400 text-xs font-mono font-semibold opacity-90 shrink-0">
+                            Generated by course-koi.vercel.app
+                        </div>
                     </div>
                 </div>
             </div>
