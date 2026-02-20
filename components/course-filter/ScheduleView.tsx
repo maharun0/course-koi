@@ -376,7 +376,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
             // 8:00 AM lies exactly at (8 * 60) mins.
             // We want the viewport to show a little bit of the hour before 8:00 AM for padding/context.
             // So let's scroll so that 7:30 AM is at the top.
-            const targetMins = 8 * 60; // 7:30 AM
+            const targetMins = 7 * 60 + 40; // 7:30 AM
             const pct = targetMins / TOTAL_MINS;
 
             // Wait briefly to allow `min-height` css to compute its real pixels matching DOM paints
@@ -1363,12 +1363,12 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                 <div ref={scrollContainerRef} className="flex-1 w-full h-full overflow-y-auto hide-scrollbar scroll-smooth rounded-lg border border-white/5">
                     {/* The Grid Container - Capture Target */}
                     <div ref={scheduleRef} className="p-2 bg-[#0f172a] min-h-[1440px] sm:min-h-[1800px] flex flex-col relative w-full">
-                        <div className="flex-1 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-white/5 rounded-lg overflow-hidden border border-white/10 relative">
+                        <div className="flex-1 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-white/5 rounded-lg border border-white/10 relative">
 
                             {/* 1. Time Column */}
-                            <div className="relative h-full border-r border-white/10 bg-black/20">
+                            <div className="relative h-full border-r border-white/10 bg-black/20 rounded-l-lg">
                                 {/* Header */}
-                                <div className="h-8 border-b border-white/10 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-black/10 sticky w-full top-0 z-40 backdrop-blur-md">Time</div>
+                                <div className="h-8 border-b border-white/10 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-black/10 sticky w-full top-0 z-40 backdrop-blur-md rounded-tl-lg">Time</div>
 
                                 {/* Time Labels */}
                                 <div className="absolute top-8 bottom-0 w-full">
@@ -1388,10 +1388,10 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                             </div>
 
                             {/* 2. Day Columns */}
-                            {DAYS.map(day => (
-                                <div key={day} className="relative h-full border-r border-white/10 last:border-r-0">
+                            {DAYS.map((day, index) => (
+                                <div key={day} className={`relative h-full border-r border-white/10 last:border-r-0 ${index === DAYS.length - 1 ? 'rounded-r-lg' : ''}`}>
                                     {/* Header */}
-                                    <div className="h-8 border-b border-white/10 flex items-center justify-center text-xs font-bold text-gray-200 bg-black/20 sticky w-full top-0 z-40 backdrop-blur-md">
+                                    <div className={`h-8 border-b border-white/10 flex items-center justify-center text-xs font-bold text-gray-200 bg-black/20 sticky w-full top-0 z-40 backdrop-blur-md ${index === DAYS.length - 1 ? 'rounded-tr-lg' : ''}`}>
                                         {day}
                                     </div>
 
