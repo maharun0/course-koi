@@ -45,7 +45,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
     const END_OF_DAY = isRamadanMode ? RAMADAN_END_OF_DAY : REGULAR_END_OF_DAY;
     const TOTAL_MINS = END_OF_DAY - START_OF_DAY;
     const [selectedCourses, setSelectedCourses] = useState<CourseRow[]>([]);
-    const [sidebarTab, setSidebarTab] = useState<'courses' | 'custom'>('courses');
+    const [sidebarTab, setSidebarTab] = useState<'courses' | 'custom'>('custom');
     const [searchTerm, setSearchTerm] = useState('');
 
     // Custom Event State
