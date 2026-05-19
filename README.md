@@ -1,4 +1,4 @@
-NOTE: Website is deployed at https://course-koi.vercel.app/
+NOTE: Website is deployed at [course-koi.maharun.dev](https://course-koi.maharun.dev)
 Updated for NSU Spring 2026 Courses
 
 # Course Koi
