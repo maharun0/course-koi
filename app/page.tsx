@@ -140,7 +140,7 @@ function CourseKoiApp() {
               <h1 className="text-4xl font-extrabold tracking-tight text-white mb-1">
                 Course <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Koi?</span>
               </h1>
-              <p className="text-gray-400 text-sm font-medium">Spring 2026 Scheduler</p>
+              <p className="text-gray-400 text-sm font-medium">Last Updated: 19 May 2026 05:00 PM</p>
             </div>
           </div>
 
