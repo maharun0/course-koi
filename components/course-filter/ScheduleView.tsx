@@ -844,10 +844,16 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
 
     // --- SEARCH & FILTER OPTIMIZATION ---
     const displayedCourses = useMemo(() => {
-        const searchLower = searchTerm.toLowerCase();
-        // Prioritize "Starred" courses passed via props
-        const starredIds = new Set(courses.map(c => c.id));
+        const searchLower = searchTerm.toLowerCase().trim();
+        const isSearching = searchLower.length > 0;
 
+        // When not searching: show ONLY starred courses (the whole point of this panel)
+        if (!isSearching) {
+            return courses;
+        }
+
+        // When searching: search across all courses, starred first
+        const starredIds = new Set(courses.map(c => c.id));
         const starredMatches: CourseRow[] = [];
         const regularMatches: CourseRow[] = [];
 
@@ -864,7 +870,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
             }
         }
 
-        // Combine: Starred first, then unselected. Slice to limit.
+        // Starred first, then other matches. Slice to limit.
         return [...starredMatches, ...regularMatches].slice(0, 50);
     }, [allCourses, courses, searchTerm]);
 
