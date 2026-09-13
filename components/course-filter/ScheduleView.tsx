@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { CourseRow } from '@/types/course';
 import { parseCourseTime } from '@/utils/timeUtils';
-import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaFileExport, FaCloudUploadAlt, FaFileCode, FaStar, FaLayerGroup, FaBook, FaChalkboardTeacher, FaChair } from 'react-icons/fa';
+import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaFileExport, FaCloudUploadAlt, FaFileCode, FaStar, FaLayerGroup, FaBook, FaChalkboardTeacher, FaChair, FaMapMarkerAlt } from 'react-icons/fa';
 import { toPng, toBlob } from 'html-to-image';
 
 interface ScheduleViewProps {
@@ -976,7 +976,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
 
 
             {/* Left: Sidebar (Swapped Position -> Right) */}
-            <div className="w-full lg:w-72 glass rounded-xl p-3 flex flex-col shrink-0 lg:h-full h-auto max-h-[500px] lg:max-h-full transition-all lg:order-2">
+            <div className="w-full lg:w-96 glass rounded-xl p-3 flex flex-col shrink-0 lg:h-full h-auto max-h-[500px] lg:max-h-full transition-all lg:order-2">
                 {/* Tabs */}
                 <div className="flex gap-1 p-1 bg-black/20 rounded-lg mb-3">
                     <button
@@ -1091,6 +1091,10 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                             <span className="flex items-center gap-1 truncate" title="Faculty">
                                                 <FaChalkboardTeacher className="shrink-0 opacity-60" size={10} />
                                                 {course.facultyCode || 'TBA'}
+                                            </span>
+                                            <span className="flex items-center gap-1 truncate" title="Room">
+                                                <FaMapMarkerAlt className="shrink-0 opacity-60" size={10} />
+                                                {course.room || 'TBA'}
                                             </span>
                                             <span className={`flex items-center gap-1 shrink-0 font-medium tabular-nums ${seatAvailabilityColor(course.seat)}`} title="Seats available">
                                                 <FaChair className="opacity-70" size={10} />
