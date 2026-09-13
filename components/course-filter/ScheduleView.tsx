@@ -1078,6 +1078,10 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                         <div className="text-[10px] opacity-80 truncate">
                                             {course.time}
                                         </div>
+                                        <div className="flex justify-between items-center mt-1 text-[10px] opacity-70">
+                                            <span title="Faculty">Fac: {course.facultyCode || 'TBA'}</span>
+                                            <span title="Seats">Seats: {course.seat}</span>
+                                        </div>
                                     </button>
                                 );
                             })}
