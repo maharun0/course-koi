@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useDeferredValue, Dispatch, SetStateAction } from 'react';
-import { FaStar, FaPlus, FaTimes, FaLayerGroup, FaSearch, FaTrash, FaBars, FaCheck, FaBook } from 'react-icons/fa';
+import { FaStar, FaPlus, FaTimes, FaLayerGroup, FaSearch, FaTrash, FaCheck, FaBook } from 'react-icons/fa';
 import { CourseRow } from '@/types/course';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -25,6 +25,8 @@ interface SidebarProps {
   coursePriorities: Record<string, number>;
   setCoursePriorities: (priorities: Record<string, number>) => void;
   onTabChange?: (tab: 'list' | 'schedule') => void;
+  isCollapsed: boolean;
+  setIsCollapsed: (value: boolean) => void;
 }
 
 interface SortableItemProps {
@@ -91,6 +93,7 @@ export default function Sidebar({
   showDialog,
   setCoursePriorities,
   onTabChange,
+  isCollapsed,
 }: SidebarProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -108,7 +111,6 @@ export default function Sidebar({
     }
   }
 
-  const [isCollapsed, setIsCollapsed] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const deferredInput = useDeferredValue(searchTerm);
 
@@ -153,25 +155,19 @@ export default function Sidebar({
   return (
     <>
       <aside
-        className={`shrink-0 h-[calc(100vh-1rem)] m-2 flex flex-col transition-all duration-300 ease-in-out relative z-20 ${isCollapsed ? 'w-14' : 'w-64'
+        className={`shrink-0 flex flex-col transition-all duration-300 ease-in-out relative z-20 overflow-hidden ${isCollapsed ? 'w-0 m-0' : 'w-64 m-2 h-[calc(100vh-1rem)]'
           }`}
       >
         {/* Glass Container */}
-        <div className="glass rounded-xl p-3 flex-1 flex flex-col overflow-hidden relative gap-2">
-          {/* Header (icon doubles as the open/close toggle) */}
-          <div className={`flex items-center gap-2 pb-2 border-b border-white/10 ${isCollapsed ? 'justify-center' : ''}`}>
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0 text-white hover:opacity-90 transition-opacity cursor-pointer"
-              title={isCollapsed ? 'Open sidebar' : 'Close sidebar'}
-            >
-              <FaBars size={14} />
-            </button>
-            {!isCollapsed && <h2 className="text-base font-bold text-white tracking-wide">Courses</h2>}
+        <div className="glass rounded-xl p-3 flex-1 flex flex-col overflow-hidden relative gap-2 w-64">
+          {/* Header */}
+          <div className="flex items-center gap-2 pb-2 border-b border-white/10">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+              <FaLayerGroup className="text-white text-sm" />
+            </div>
+            <h2 className="text-base font-bold text-white tracking-wide">Courses</h2>
           </div>
 
-          {!isCollapsed && (
-            <>
           {/* All Courses Button (Primary Action) */}
           <div>
             <button
@@ -296,8 +292,6 @@ export default function Sidebar({
               <span>Reset Priorities</span>
             </button>
           </div>
-            </>
-          )}
         </div>
       </aside>
 

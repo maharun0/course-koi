@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { Dispatch, SetStateAction } from 'react';
 import { CourseRow } from '@/types/course';
-import { FaFilter, FaSearch, FaTimes } from 'react-icons/fa';
+import { FaFilter, FaSearch, FaTimes, FaPlus } from 'react-icons/fa';
 
 interface FilterMenuProps {
   view: 'all' | 'starred';
@@ -19,6 +19,7 @@ interface FilterMenuProps {
   setSelectedStarredCourses: Dispatch<SetStateAction<string[]>>;
   savedCourses: CourseRow[];
   starredCourses: CourseRow[];
+  onOpenSidebar?: () => void;
 }
 
 export default function FilterMenu({
@@ -35,6 +36,7 @@ export default function FilterMenu({
   setSelectedStarredCourses,
   savedCourses,
   starredCourses,
+  onOpenSidebar,
 }: FilterMenuProps) {
   const filterMenuRef = useRef<HTMLDivElement>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
@@ -156,26 +158,42 @@ export default function FilterMenu({
       </div>
 
       {/* Course Pills */}
-      {uniqueCourses.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 animate-fade-in">
-          {uniqueCourses.map((courseCode) => {
-            const isActive = selectedCourses.includes(courseCode);
-            return (
-              <button
-                key={courseCode}
-                onClick={() => toggleCourseFilter(courseCode)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 ${isActive
-                  ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/25'
-                  : 'bg-white/40 dark:bg-white/5 text-gray-600 dark:text-gray-400 border-black/5 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10'
-                  }`}
-              >
-                {courseCode}
-                {isActive && <FaTimes className="text-[10px] opacity-70" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div className="flex flex-wrap gap-1.5 animate-fade-in">
+        <button
+          onClick={() => (view === 'all' ? setSelectedAllCourses([]) : setSelectedStarredCourses([]))}
+          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 ${selectedCourses.length === 0
+            ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/25'
+            : 'bg-white/40 dark:bg-white/5 text-gray-600 dark:text-gray-400 border-black/5 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10'
+            }`}
+        >
+          ALL
+        </button>
+        {uniqueCourses.map((courseCode) => {
+          const isActive = selectedCourses.includes(courseCode);
+          return (
+            <button
+              key={courseCode}
+              onClick={() => toggleCourseFilter(courseCode)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 ${isActive
+                ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/25'
+                : 'bg-white/40 dark:bg-white/5 text-gray-600 dark:text-gray-400 border-black/5 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10'
+                }`}
+            >
+              {courseCode}
+              {isActive && <FaTimes className="text-[10px] opacity-70" />}
+            </button>
+          );
+        })}
+        {onOpenSidebar && (
+          <button
+            onClick={onOpenSidebar}
+            className="px-2.5 py-1 rounded-full text-xs font-medium border border-dashed border-indigo-400/40 text-indigo-300 hover:bg-indigo-500/10 hover:border-indigo-400/60 transition-all duration-200 flex items-center gap-1.5"
+          >
+            <FaPlus className="text-[10px]" />
+            Add Course
+          </button>
+        )}
+      </div>
     </div>
   );
 }

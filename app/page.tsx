@@ -12,7 +12,7 @@ import useFiltering from '@/hooks/useFiltering';
 import useSorting from '@/hooks/useSorting';
 import { CourseRow } from '@/types/course';
 import Image from 'next/image';
-import { FaGithub, FaStar, FaList, FaCalendarAlt } from 'react-icons/fa';
+import { FaGithub, FaStar, FaList, FaCalendarAlt, FaBars } from 'react-icons/fa';
 
 function CourseKoiApp() {
   const router = useRouter();
@@ -59,6 +59,7 @@ function CourseKoiApp() {
   const { sorts, toggleSort, sortedData, starredSortedData } = useSorting(filteredData, starredFilteredData);
 
   const [activeTab, setActiveTabState] = useState<'list' | 'schedule'>('list');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   // Sync state with URL param
   useEffect(() => {
@@ -126,6 +127,8 @@ function CourseKoiApp() {
         coursePriorities={coursePriorities}
         setCoursePriorities={setCoursePriorities}
         onTabChange={setActiveTab}
+        isCollapsed={sidebarCollapsed}
+        setIsCollapsed={setSidebarCollapsed}
       />
 
       <main className="flex-1 p-2 h-screen flex flex-col overflow-hidden relative">
@@ -133,6 +136,13 @@ function CourseKoiApp() {
         {/* Header Region */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6 shrink-0 z-20 relative">
           <div className="flex items-center gap-4 animate-fade-in-down">
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0 text-white hover:opacity-90 transition-opacity cursor-pointer"
+              title={sidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+            >
+              <FaBars size={16} />
+            </button>
             <div className="relative group cursor-pointer">
               <div className="absolute inset-0 bg-indigo-500 rounded-full blur opacity-40 group-hover:opacity-60 transition-opacity"></div>
               <Image src="/course_koi.png" alt="Course Koi" width={64} height={64} className="rounded-full relative z-10 border-2 border-white/10" />
@@ -208,6 +218,7 @@ function CourseKoiApp() {
                 setSelectedStarredCourses={setSelectedStarredCourses}
                 savedCourses={savedCourses}
                 starredCourses={starredCourses}
+                onOpenSidebar={() => setSidebarCollapsed(false)}
               />
               <CourseTable
                 sortedData={view === 'all' ? sortedData : starredSortedData}
