@@ -24,8 +24,18 @@ MIN_EXPECTED_ROWS = 1000
 DHAKA_TZ = ZoneInfo("Asia/Dhaka")
 
 
+REQUEST_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+
 def fetch_html() -> str:
-    response = requests.get(SOURCE_URL, timeout=30)
+    response = requests.get(SOURCE_URL, headers=REQUEST_HEADERS, timeout=30)
     response.raise_for_status()
     return response.text
 
