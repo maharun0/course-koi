@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { CourseRow } from '@/types/course';
 import { parseCourseTime } from '@/utils/timeUtils';
-import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaFileExport, FaCloudUploadAlt, FaFileCode, FaStar, FaLayerGroup, FaBook } from 'react-icons/fa';
+import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaFileExport, FaCloudUploadAlt, FaFileCode, FaStar, FaLayerGroup, FaBook, FaChalkboardTeacher, FaChair } from 'react-icons/fa';
 import { toPng, toBlob } from 'html-to-image';
 
 interface ScheduleViewProps {
@@ -97,6 +97,14 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
 
     // --- HOVER GAP DETECTION ---
     const [hoverState, setHoverState] = useState<{ day: string; mins: number } | null>(null);
+
+    // Seat availability signal: genuinely useful for registration, not decorative
+    const seatAvailabilityColor = (seat: number | undefined): string => {
+        if (seat === undefined) return 'text-gray-400';
+        if (seat >= 20) return 'text-emerald-400';
+        if (seat >= 5) return 'text-amber-400';
+        return 'text-rose-400';
+    };
 
     // Helpers
     const minutesToTimeStr = (totalMins: number): string => {
@@ -1040,11 +1048,12 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                                     setCourseListMode('mine');
                                                 }
                                             }}
-                                            className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${isActive
-                                                ? 'bg-indigo-600 border-indigo-500 text-white'
-                                                : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                                            className={`flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-full border transition-colors ${isActive
+                                                ? 'bg-indigo-500/15 border-indigo-400/40 text-indigo-200'
+                                                : 'bg-white/[0.035] border-transparent text-gray-400 hover:bg-white/[0.07] hover:text-gray-200'
                                                 }`}
                                         >
+                                            {isActive && <FaCheck size={8} />}
                                             {c.courseCode}
                                         </button>
                                     );
@@ -1062,25 +1071,31 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                         onClick={() => handleCourseSelect(course)}
                                         onMouseEnter={() => setHoveredCourse(course)}
                                         onMouseLeave={() => setHoveredCourse(prev => prev?.id === course.id ? null : prev)}
-                                        className={`w-full text-left p-2 rounded-lg border transition-all duration-200 group relative ${isSelected
-                                            ? 'bg-indigo-600/90 border-indigo-500 shadow-md transform scale-[1.02]'
-                                            : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-gray-400'
+                                        className={`w-full text-left px-3 py-2 rounded-lg border transition-all duration-150 group relative ${isSelected
+                                            ? 'bg-indigo-500/15 border-indigo-400/40'
+                                            : 'bg-white/[0.035] border-white/5 hover:bg-white/[0.07] hover:border-white/10'
                                             }`}
                                     >
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className={`font-bold text-sm ${isSelected ? 'text-white' : 'group-hover:text-gray-200'}`}>
+                                        <div className="flex justify-between items-baseline gap-2">
+                                            <span className={`font-semibold tracking-tight text-sm truncate ${isSelected ? 'text-indigo-100' : 'text-gray-200'}`}>
                                                 {course.courseCode}
                                             </span>
-                                            <span className={`text-[10px] px-1.5 rounded ${isSelected ? 'bg-black/20 text-indigo-100' : 'bg-black/20 text-gray-500'}`}>
+                                            <span className={`shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-medium tabular-nums ${isSelected ? 'bg-indigo-400/20 text-indigo-200' : 'bg-white/5 text-gray-400'}`}>
                                                 {course.section}
                                             </span>
                                         </div>
-                                        <div className="text-[10px] opacity-80 truncate">
+                                        <div className="text-[11px] text-gray-500 truncate mt-0.5">
                                             {course.time}
                                         </div>
-                                        <div className="flex justify-between items-center mt-1 text-[10px] opacity-70">
-                                            <span title="Faculty">Fac: {course.facultyCode || 'TBA'}</span>
-                                            <span title="Seats">Seats: {course.seat}</span>
+                                        <div className="flex justify-between items-center mt-1.5 text-[11px] text-gray-400">
+                                            <span className="flex items-center gap-1 truncate" title="Faculty">
+                                                <FaChalkboardTeacher className="shrink-0 opacity-60" size={10} />
+                                                {course.facultyCode || 'TBA'}
+                                            </span>
+                                            <span className={`flex items-center gap-1 shrink-0 font-medium tabular-nums ${seatAvailabilityColor(course.seat)}`} title="Seats available">
+                                                <FaChair className="opacity-70" size={10} />
+                                                {course.seat ?? '—'}
+                                            </span>
                                         </div>
                                     </button>
                                 );
