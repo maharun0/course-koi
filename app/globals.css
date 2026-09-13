@@ -1,51 +1,267 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------- */
+/* Design tokens — "Violet Panel" system (see DESIGN.md)                  */
+/* ---------------------------------------------------------------------- */
+
+@theme {
+  /* Neutrals (light values — dark overrides below) */
+  --color-canvas: #f7f7fb;
+  --color-surface: #ffffff;
+  --color-raised: #ffffff;
+  --color-rule: #e7e6f2;
+  --color-rule-soft: #f0eff9;
+  --color-ink: #17162b;
+  --color-ink-2: #514f6b;
+  --color-ink-3: #86849e;
+  --color-slate: #86849e;
+
+  /* Accent */
+  --color-accent: #6c5ce7;
+  --color-accent-2: #a78bfa;
+  --color-accent-ink: #ffffff;
+
+  /* Status */
+  --color-ok: #1f9d6c;
+  --color-warn: #b3760f;
+  --color-bad: #e0396b;
+  --color-celebrate: #ffb020;
+
+  /* Data / category palette */
+  --color-cat-1: #ff6f91;
+  --color-cat-2: #14b8a6;
+  --color-cat-3: #f59e0b;
+  --color-cat-4: #4c6fff;
+
+  /* Modal/overlay scrim — fixed, not theme-flipped, same precedent DESIGN.md
+     sets for shadow tints (§4: ink-tinted, reused as-is in both themes). */
+  --color-scrim: #17162b;
+
+  /* Type */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", monospace;
+  --font-display: var(--font-asimovian), var(--font-sans);
+
+  --text-micro: 10px;
+  --text-micro--line-height: 14px;
+  --text-mini: 11px;
+  --text-mini--line-height: 16px;
+  --text-code: 12px;
+  --text-code--line-height: 16px;
+  --text-body: 13px;
+  --text-body--line-height: 20px;
+  --text-lead: 15px;
+  --text-lead--line-height: 22px;
+  --text-head: 20px;
+  --text-head--line-height: 26px;
+  --text-figure: 30px;
+  --text-figure--line-height: 34px;
+
+  /* Shape */
+  --radius-chip: 10px;
+  --radius-control: 12px;
+  --radius-panel: 20px;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --shadow-rest: 0 1px 2px rgb(23 22 43 / 0.06), 0 1px 1px rgb(23 22 43 / 0.04);
+  --shadow-hover: 0 8px 20px rgb(23 22 43 / 0.12), 0 2px 6px rgb(23 22 43 / 0.08);
+  --shadow-active: 0 2px 6px rgb(23 22 43 / 0.10);
+  --shadow-float: 0 24px 48px rgb(23 22 43 / 0.18), 0 8px 16px rgb(23 22 43 / 0.10);
+
+  /* Motion */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Derived (generate bg-accent-gradient / shadow-glow utilities) */
+  --background-image-accent-gradient: linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
+  --shadow-glow: 0 0 0 4px color-mix(in oklab, var(--color-accent) 16%, transparent);
+}
+
+/* cat-5 / cat-6 alias the neutral inks — defined outside @theme since they
+   reference other tokens rather than a literal value. */
+:root {
+  --color-cat-5: var(--color-ink);
+  --color-cat-6: var(--color-slate);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-canvas: #14132b;
+    --color-surface: #1b1a35;
+    --color-raised: #221f42;
+    --color-rule: #332f5c;
+    --color-rule-soft: #29264a;
+    --color-ink: #f1f0fa;
+    --color-ink-2: #b7b4d6;
+    --color-ink-3: #837fab;
+    --color-slate: #837fab;
+
+    --color-accent: #8b7ff2;
+    --color-accent-2: #c4b5fd;
+
+    --color-ok: #3fc98f;
+    --color-warn: #ecb15c;
+    --color-bad: #f2618c;
+    --color-celebrate: #ffc24d;
+
+    --color-cat-1: #e8447a;
+    --color-cat-2: #0ea5b7;
+    --color-cat-3: #c97a22;
+    --color-cat-4: #5876e8;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-canvas: #14132b;
+  --color-surface: #1b1a35;
+  --color-raised: #221f42;
+  --color-rule: #332f5c;
+  --color-rule-soft: #29264a;
+  --color-ink: #f1f0fa;
+  --color-ink-2: #b7b4d6;
+  --color-ink-3: #837fab;
+  --color-slate: #837fab;
+
+  --color-accent: #8b7ff2;
+  --color-accent-2: #c4b5fd;
+
+  --color-ok: #3fc98f;
+  --color-warn: #ecb15c;
+  --color-bad: #f2618c;
+  --color-celebrate: #ffc24d;
+
+  --color-cat-1: #e8447a;
+  --color-cat-2: #0ea5b7;
+  --color-cat-3: #c97a22;
+  --color-cat-4: #5876e8;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Utilities                                                               */
+/* ---------------------------------------------------------------------- */
+
 @layer utilities {
+  /* Flat neutral panel — replaces the old glassmorphism look everywhere
+     it's used (cards, sidebar, dropdowns, modals) without touching every
+     call site. */
   .glass {
-    @apply backdrop-blur-md bg-white/10 border border-white/20 shadow-lg;
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-rule);
+    box-shadow: var(--shadow-rest);
   }
 
   .glass-hover {
-    @apply hover:bg-white/20 transition-colors duration-200;
+    transition: background-color 150ms var(--ease-spring);
+  }
+  .glass-hover:hover {
+    background-color: var(--color-rule-soft);
   }
 
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    background-image: var(--background-image-accent-gradient);
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  .scroll-area::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
 
-@keyframes float {
-  0% {
-    transform: translateY(0px);
+@keyframes fade-in {
+  from {
+    opacity: 0;
   }
-
-  50% {
-    transform: translateY(-10px);
-  }
-
-  100% {
-    transform: translateY(0px);
+  to {
+    opacity: 1;
   }
 }
 
-:root {
-  --background: #0f172a;
-  --foreground: #e2e8f0;
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 220ms var(--ease-spring) both;
+}
+.animate-fade-in-down {
+  animation: fade-in-down 220ms var(--ease-spring) both;
+}
+.animate-fade-in-up {
+  animation: fade-in-up 220ms var(--ease-spring) both;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Base                                                                    */
+/* ---------------------------------------------------------------------- */
+
+* {
+  border-color: var(--color-rule);
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  background-image:
-    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(6, 182, 212, 0.15) 0px, transparent 50%);
-  background-attachment: fixed;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  font-weight: 450;
 }
 
-/* Custom Scrollbar */
+h1, h2, h3 {
+  font-weight: 650;
+}
+
+button, label, .label {
+  font-weight: 550;
+}
+
+/* Focus states — every interactive element, :focus-visible only */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-control);
+}
+
+/* Custom Scrollbar — thin, rule-colored thumb, default for scrollable panels */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -56,17 +272,25 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 9999px;
-  transition: background-color 0.2s ease;
+  background: var(--color-rule);
+  border-radius: var(--radius-pill);
+  transition: background-color 180ms var(--ease-spring);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-ink-3);
 }
 
-/* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: var(--color-rule) transparent;
+}
+
+/* Reduced motion safety net */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

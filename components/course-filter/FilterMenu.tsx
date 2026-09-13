@@ -98,15 +98,15 @@ export default function FilterMenu({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search within table..."
-            className="block w-full pl-10 pr-10 py-2 rounded-xl border-none ring-1 ring-black/5 dark:ring-white/10 bg-white/50 dark:bg-black/20 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 backdrop-blur-sm shadow-sm transition-all"
+            className="block w-full pl-10 pr-10 py-2 rounded-control border border-rule bg-raised text-ink placeholder-ink-3 focus:outline-none focus:ring-2 focus:ring-accent/50 shadow-rest transition-all duration-150 ease-spring"
           />
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FaSearch className="text-gray-400 group-focus-within:text-indigo-400 transition-colors" />
+            <FaSearch className="text-ink-3 group-focus-within:text-accent transition-colors duration-150 ease-spring" />
           </div>
           {query && (
             <button
               onClick={() => setQuery('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-ink-3 hover:text-ink transition-colors duration-150 ease-spring"
             >
               <FaTimes />
             </button>
@@ -118,22 +118,22 @@ export default function FilterMenu({
           <button
             ref={filterButtonRef}
             onClick={() => setShowFilterMenu(!showFilterMenu)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all shadow-sm ${showFilterMenu
-              ? 'bg-indigo-600 text-white ring-2 ring-indigo-500 ring-offset-2 ring-offset-[#f8fafc] dark:ring-offset-[#0f172a]'
-              : 'bg-white dark:bg-black/20 ring-1 ring-black/5 dark:ring-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'
+            className={`flex items-center gap-2 px-3 py-2 rounded-control text-body font-medium transition-all duration-150 ease-spring shadow-rest ${showFilterMenu
+              ? 'bg-accent text-accent-ink'
+              : 'bg-surface border border-rule text-ink hover:bg-rule-soft'
               }`}
           >
-            <FaFilter className={showFilterMenu ? 'text-white' : 'text-gray-400'} />
+            <FaFilter className={showFilterMenu ? 'text-accent-ink' : 'text-ink-3'} />
             Columns
           </button>
 
           {showFilterMenu && (
             <div
               ref={filterMenuRef}
-              className="absolute right-0 mt-2 w-56 glass rounded-xl shadow-2xl z-20 overflow-hidden"
+              className="absolute right-0 mt-2 w-56 glass rounded-panel shadow-float z-20 overflow-hidden"
             >
-              <div className="px-4 py-3 border-b border-white/10">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Visible Columns</h3>
+              <div className="px-4 py-3 border-b border-rule">
+                <h3 className="text-mini font-semibold text-ink-3">Visible columns</h3>
               </div>
               <div className="p-2 space-y-1">
                 {['courseCode', 'facultyCode', 'room', 'section', 'time'].map((col) => {
@@ -143,11 +143,11 @@ export default function FilterMenu({
                     <button
                       key={col}
                       onClick={() => toggleFilterColumn(col)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${isSelected ? 'bg-indigo-500/20 text-indigo-300' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-control text-body transition-colors duration-150 ease-spring ${isSelected ? 'bg-accent/15 text-accent' : 'text-ink-2 hover:bg-rule-soft hover:text-ink'
                         }`}
                     >
                       <span>{label}</span>
-                      {isSelected && <span className="w-2 h-2 rounded-full bg-indigo-400 shadow-lg shadow-indigo-500/50"></span>}
+                      {isSelected && <span className="w-2 h-2 rounded-pill bg-accent shadow-glow"></span>}
                     </button>
                   )
                 })}
@@ -161,9 +161,9 @@ export default function FilterMenu({
       <div className="flex flex-wrap gap-1.5 animate-fade-in">
         <button
           onClick={() => (view === 'all' ? setSelectedAllCourses([]) : setSelectedStarredCourses([]))}
-          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 ${selectedCourses.length === 0
-            ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/25'
-            : 'bg-white/40 dark:bg-white/5 text-gray-600 dark:text-gray-400 border-black/5 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10'
+          className={`px-2.5 py-1 rounded-pill text-mini font-medium border transition-all duration-150 ease-spring ${selectedCourses.length === 0
+            ? 'bg-accent text-accent-ink border-transparent shadow-rest'
+            : 'bg-surface text-ink-2 border-rule hover:bg-rule-soft'
             }`}
         >
           ALL
@@ -174,9 +174,9 @@ export default function FilterMenu({
             <button
               key={courseCode}
               onClick={() => toggleCourseFilter(courseCode)}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200 flex items-center gap-1.5 ${isActive
-                ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-500/25'
-                : 'bg-white/40 dark:bg-white/5 text-gray-600 dark:text-gray-400 border-black/5 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10'
+              className={`px-2.5 py-1 rounded-pill text-mini font-medium border transition-all duration-150 ease-spring flex items-center gap-1.5 ${isActive
+                ? 'bg-accent text-accent-ink border-transparent shadow-rest'
+                : 'bg-surface text-ink-2 border-rule hover:bg-rule-soft'
                 }`}
             >
               {courseCode}
@@ -187,7 +187,7 @@ export default function FilterMenu({
         {onOpenSidebar && (
           <button
             onClick={onOpenSidebar}
-            className="px-2.5 py-1 rounded-full text-xs font-medium border border-dashed border-indigo-400/40 text-indigo-300 hover:bg-indigo-500/10 hover:border-indigo-400/60 transition-all duration-200 flex items-center gap-1.5"
+            className="px-2.5 py-1 rounded-pill text-mini font-medium border border-dashed border-accent/40 text-accent hover:bg-accent/10 hover:border-accent/60 transition-all duration-150 ease-spring flex items-center gap-1.5"
           >
             <FaPlus className="text-[10px]" />
             Add Course

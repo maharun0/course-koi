@@ -54,12 +54,12 @@ export default function CourseTable({
       <th
         key={label}
         onClick={() => toggleSort(key)}
-        className={`px-2 py-2 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors select-none whitespace-nowrap ${widthClass}`}
+        className={`px-2 py-2 text-center text-mini font-semibold text-ink-3 uppercase tracking-wider cursor-pointer hover:text-ink transition-colors duration-150 ease-spring select-none whitespace-nowrap ${widthClass}`}
       >
         <div className="flex items-center justify-center gap-2">
           {label}
           {active ? (
-            <span className="text-indigo-400 flex items-center">
+            <span className="text-accent flex items-center">
               {direction === 'asc' ? <FaSortUp /> : <FaSortDown />}
               {sorts.length > 1 && <span className="ml-1 text-[10px]">({order})</span>}
             </span>
@@ -74,16 +74,17 @@ export default function CourseTable({
   return (
     <div className="w-full space-y-4">
       {/* Helper Note (Mobile Only) */}
-      <div className="md:hidden text-center text-xs text-gray-500 mb-2">
+      <div className="md:hidden text-center text-mini text-ink-3 mb-2">
         Tip: Scroll horizontally for more columns
       </div>
 
-      <div className="hidden md:block glass rounded-xl overflow-hidden shadow-2xl border border-white/10">
+      {/* Borderless table: interior rules only, no outer box/shadow-2xl card */}
+      <div className="hidden md:block rounded-panel overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-center">
-            <thead className="bg-black/20 border-b border-white/10">
+            <thead className="border-b border-rule">
               <tr>
-                <th className={`px-2 py-2 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider ${widths.index}`}>#</th>
+                <th className={`px-2 py-2 text-center text-mini font-semibold text-ink-3 uppercase tracking-wider ${widths.index}`}>#</th>
                 {header('Course', 'courseCode', widths.course)}
                 {header('Sec', 'section', widths.section)}
                 {header('Fac', 'facultyCode', widths.faculty)}
@@ -91,32 +92,32 @@ export default function CourseTable({
                 {header('Rm', 'room', widths.room)}
                 {header('St', 'seat', widths.seat)}
                 {header('Priority', 'priority', widths.priority)}
-                <th className={`px-2 py-2 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider ${widths.star}`}>Star</th>
+                <th className={`px-2 py-2 text-center text-mini font-semibold text-ink-3 uppercase tracking-wider ${widths.star}`}>Star</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-rule">
               {sortedData.slice(0, 100).map((r, idx) => {
                 const isStarred = starredCourses.some((c) => c.id === r.id);
                 return (
-                  <tr key={r.id} className="hover:bg-white/5 transition-colors group">
-                    <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-500">{idx + 1}</td>
+                  <tr key={r.id} className="hover:bg-rule-soft transition-colors duration-150 ease-spring group">
+                    <td className="px-2 py-1 whitespace-nowrap text-mini text-ink-3 tabular font-mono">{idx + 1}</td>
                     <td className="px-2 py-1 whitespace-nowrap">
-                      <div className={`text-xs font-bold text-white group-hover:text-indigo-300 transition-colors truncate overflow-hidden ${widths.courseTruncate}`} title={r.courseCode}>
+                      <div className={`text-mini font-bold text-ink group-hover:text-accent transition-colors duration-150 ease-spring truncate overflow-hidden ${widths.courseTruncate}`} title={r.courseCode}>
                         {r.courseCode}
                       </div>
                     </td>
-                    <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-300">{r.section}</td>
-                    <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-300">{r.facultyCode}</td>
-                    <td className={`px-2 py-1 whitespace-nowrap text-xs text-gray-300 truncate overflow-hidden ${widths.timeTruncate}`} title={r.time}>{r.time}</td>
-                    <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-300">{r.room}</td>
-                    <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-300">{r.seat}</td>
-                    <td className="px-2 py-1 whitespace-nowrap text-xs">
+                    <td className="px-2 py-1 whitespace-nowrap text-mini text-ink-2 tabular font-mono">{r.section}</td>
+                    <td className="px-2 py-1 whitespace-nowrap text-mini text-ink-2">{r.facultyCode}</td>
+                    <td className={`px-2 py-1 whitespace-nowrap text-mini text-ink-2 truncate overflow-hidden ${widths.timeTruncate}`} title={r.time}>{r.time}</td>
+                    <td className="px-2 py-1 whitespace-nowrap text-mini text-ink-2">{r.room}</td>
+                    <td className="px-2 py-1 whitespace-nowrap text-mini text-ink-2 tabular font-mono">{r.seat}</td>
+                    <td className="px-2 py-1 whitespace-nowrap text-mini">
                       <div className="flex items-center justify-center">
                         {/* Stepper for Priority */}
-                        <div className="flex items-center bg-black/20 rounded-lg border border-white/10 overflow-hidden scale-90">
+                        <div className="flex items-center bg-raised rounded-control border border-rule overflow-hidden scale-90">
                           <button
                             onClick={() => changePriority(r, (r.priority ?? 0) - 1)}
-                            className="px-2 py-1 hover:bg-white/10 text-gray-400 hover:text-white transition-colors border-r border-white/5"
+                            className="px-2 py-1 hover:bg-rule-soft text-ink-3 hover:text-ink transition-colors duration-150 ease-spring border-r border-rule"
                           >
                             -
                           </button>
@@ -126,22 +127,22 @@ export default function CourseTable({
                             max="10"
                             value={r.priority ?? 0}
                             onChange={(e) => changePriority(r, parseInt(e.target.value, 10) || 0)}
-                            className="w-8 bg-transparent text-center text-white focus:outline-none font-mono text-[10px] appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            className="w-8 bg-transparent text-center text-ink focus:outline-none font-mono tabular text-[10px] appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                           <button
                             onClick={() => changePriority(r, (r.priority ?? 0) + 1)}
-                            className="px-2 py-1 hover:bg-white/10 text-gray-400 hover:text-white transition-colors border-l border-white/5"
+                            className="px-2 py-1 hover:bg-rule-soft text-ink-3 hover:text-ink transition-colors duration-150 ease-spring border-l border-rule"
                           >
                             +
                           </button>
                         </div>
                       </div>
                     </td>
-                    <td className="px-2 py-1 whitespace-nowrap text-xs">
+                    <td className="px-2 py-1 whitespace-nowrap text-mini">
                       <div className="flex items-center justify-center">
                         <button
                           onClick={() => toggleStar(r)}
-                          className={`transition-all transform hover:scale-110 p-1 rounded-full hover:bg-white/10 ${isStarred ? 'text-yellow-400' : 'text-gray-600 hover:text-yellow-200'
+                          className={`transition-transform duration-150 ease-spring transform hover:scale-110 p-1 rounded-pill hover:bg-rule-soft ${isStarred ? 'text-accent' : 'text-ink-3 hover:text-accent'
                             }`}
                         >
                           <FaStar />
@@ -153,16 +154,16 @@ export default function CourseTable({
               })}
               {sortedData.length > 100 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-xs text-gray-500 italic border-t border-white/5">
+                  <td colSpan={8} className="px-6 py-4 text-center text-mini text-ink-3 italic border-t border-rule">
                     Showing first 100 of {sortedData.length} courses. Use search/filters to find specific items.
                   </td>
                 </tr>
               )}
               {sortedData.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                    <p className="text-lg font-medium">No courses found</p>
-                    <p className="text-sm">Try adjusting your filters or search query.</p>
+                  <td colSpan={8} className="px-6 py-12 text-center text-ink-3">
+                    <p className="text-lead font-medium">No courses found</p>
+                    <p className="text-body">Try adjusting your filters or search query.</p>
                   </td>
                 </tr>
               )}
@@ -176,48 +177,48 @@ export default function CourseTable({
         {sortedData.map((r) => {
           const isStarred = starredCourses.some((c) => c.id === r.id);
           return (
-            <div key={r.id} className="glass rounded-xl p-4 space-y-3 relative overflow-hidden">
+            <div key={r.id} className="glass rounded-panel p-4 space-y-3 relative overflow-hidden">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-lg font-bold text-white">{r.courseCode}</h3>
-                  <p className="text-sm text-gray-400">Section {r.section}</p>
+                  <h3 className="text-lead font-bold text-ink">{r.courseCode}</h3>
+                  <p className="text-body text-ink-2">Section {r.section}</p>
                 </div>
                 <button
                   onClick={() => toggleStar(r)}
-                  className={`p-2 rounded-full ${isStarred ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-500 bg-white/5'}`}
+                  className={`p-2 rounded-pill ${isStarred ? 'text-accent bg-accent/10' : 'text-ink-3 bg-rule-soft'}`}
                 >
                   <FaStar />
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="bg-white/5 rounded px-3 py-2">
-                  <span className="block text-xs text-gray-500">Time</span>
-                  <span className="text-gray-200">{r.time}</span>
+              <div className="grid grid-cols-2 gap-2 text-body">
+                <div className="bg-rule-soft rounded-control px-3 py-2">
+                  <span className="block text-mini text-ink-3">Time</span>
+                  <span className="text-ink-2">{r.time}</span>
                 </div>
-                <div className="bg-white/5 rounded px-3 py-2">
-                  <span className="block text-xs text-gray-500">Room</span>
-                  <span className="text-gray-200">{r.room}</span>
+                <div className="bg-rule-soft rounded-control px-3 py-2">
+                  <span className="block text-mini text-ink-3">Room</span>
+                  <span className="text-ink-2">{r.room}</span>
                 </div>
-                <div className="bg-white/5 rounded px-3 py-2">
-                  <span className="block text-xs text-gray-500">Faculty</span>
-                  <span className="text-gray-200">{r.facultyCode}</span>
+                <div className="bg-rule-soft rounded-control px-3 py-2">
+                  <span className="block text-mini text-ink-3">Faculty</span>
+                  <span className="text-ink-2">{r.facultyCode}</span>
                 </div>
-                <div className="bg-white/5 rounded px-3 py-2">
-                  <span className="block text-xs text-gray-500">Seats</span>
-                  <span className="text-gray-200">{r.seat}</span>
+                <div className="bg-rule-soft rounded-control px-3 py-2">
+                  <span className="block text-mini text-ink-3">Seats</span>
+                  <span className="text-ink-2 tabular font-mono">{r.seat}</span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-white/5 mt-2">
-                <span className="text-xs text-gray-500">Priority:</span>
+              <div className="flex items-center gap-2 pt-2 border-t border-rule mt-2">
+                <span className="text-mini text-ink-3">Priority:</span>
                 <input
                   type="number"
                   min="-10"
                   max="10"
                   value={r.priority ?? 0}
                   onChange={(e) => changePriority(r, parseInt(e.target.value, 10) || 0)}
-                  className="w-16 bg-black/20 border border-white/10 rounded px-2 py-1 text-center text-white focus:outline-none focus:border-indigo-500 font-mono text-xs"
+                  className="w-16 bg-raised border border-rule rounded-control px-2 py-1 text-center text-ink focus:outline-none focus:border-accent font-mono tabular text-body"
                 />
               </div>
             </div>

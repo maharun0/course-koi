@@ -37,6 +37,11 @@ const START_OF_DAY = 8 * 60; // 08:00 AM
 const END_OF_DAY = 19 * 60 + 30; // 07:30 PM (End of last slot)
 const TOTAL_MINS = END_OF_DAY - START_OF_DAY;
 
+// Category palette (DESIGN.md §1) — 4 vivid, distinguishable hues, cycled
+// across the courses on a schedule. Neutral cat-6 is reserved for generic
+// "Custom" blocks below.
+const CATEGORY_COLORS = ['bg-cat-1', 'bg-cat-2', 'bg-cat-3', 'bg-cat-4'];
+
 export default function ScheduleView({ courses, allCourses, savedCourses }: ScheduleViewProps) {
     const [selectedCourses, setSelectedCourses] = useState<CourseRow[]>([]);
     const [sidebarTab, setSidebarTab] = useState<'courses' | 'custom'>('courses');
@@ -100,10 +105,10 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
 
     // Seat availability signal: genuinely useful for registration, not decorative
     const seatAvailabilityColor = (seat: number | undefined): string => {
-        if (seat === undefined) return 'text-gray-400';
-        if (seat >= 20) return 'text-emerald-400';
-        if (seat >= 5) return 'text-amber-400';
-        return 'text-rose-400';
+        if (seat === undefined) return 'text-ink-3';
+        if (seat >= 20) return 'text-ok';
+        if (seat >= 5) return 'text-warn';
+        return 'text-bad';
     };
 
     // Helpers
@@ -310,17 +315,13 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
         if (!isLoaded) return;
 
         let hasChanges = false;
-        const colors = [
-            'bg-blue-600', 'bg-purple-600', 'bg-pink-600',
-            'bg-indigo-600', 'bg-teal-600', 'bg-orange-600'
-        ];
 
         const updated = selectedCourses.map((c, idx) => {
             if (!c.color) {
                 hasChanges = true;
-                let newColor = colors[idx % colors.length];
-                if (c.courseCode.toLowerCase() === 'work') newColor = 'bg-yellow-500 text-black';
-                else if (c.section === 'Custom' && c.courseCode.toLowerCase() !== 'work') newColor = 'bg-gray-600';
+                let newColor = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
+                if (c.courseCode.toLowerCase() === 'work') newColor = 'bg-warn text-accent-ink';
+                else if (c.section === 'Custom' && c.courseCode.toLowerCase() !== 'work') newColor = 'bg-cat-6';
                 return { ...c, color: newColor };
             }
             return c;
@@ -405,17 +406,13 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
             setSelectedCourses(newSelection);
         } else {
             // Assign a permanent color
-            const colors = [
-                'bg-blue-600', 'bg-purple-600', 'bg-pink-600',
-                'bg-indigo-600', 'bg-teal-600', 'bg-orange-600'
-            ];
-            let newColor = colors[selectedCourses.length % colors.length];
+            let newColor = CATEGORY_COLORS[selectedCourses.length % CATEGORY_COLORS.length];
 
             // Overrides
             if (course.courseCode.toLowerCase() === 'work') {
-                newColor = 'bg-yellow-500 text-black';
+                newColor = 'bg-warn text-accent-ink';
             } else if (course.section === 'Custom' && course.courseCode.toLowerCase() !== 'work') {
-                newColor = 'bg-gray-600';
+                newColor = 'bg-cat-6';
             }
 
             setSelectedCourses([...selectedCourses, { ...course, color: newColor }]);
@@ -474,11 +471,6 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
         const temp: Record<string, ScheduleItem[]> = {};
         DAYS.forEach(d => (temp[d] = []));
 
-        const colors = [
-            'bg-blue-600', 'bg-purple-600', 'bg-pink-600',
-            'bg-indigo-600', 'bg-teal-600', 'bg-orange-600'
-        ];
-
         // Combine selected courses with preview (if exists)
         const coursesToRender = [...selectedCourses];
         if (previewCourse) {
@@ -499,16 +491,16 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
 
             if (!color) {
                 // Fallback for logic
-                color = colors[idx % colors.length];
+                color = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
                 if (course.courseCode.toLowerCase() === 'work') {
-                    color = 'bg-yellow-500 text-black';
+                    color = 'bg-warn text-accent-ink';
                 } else if (course.section === 'Custom') {
-                    color = 'bg-gray-600';
+                    color = 'bg-cat-6';
                 }
             }
 
             // Preview override
-            if (isPreview) color = 'bg-gray-500';
+            if (isPreview) color = 'bg-ink-3';
 
             schedule.slots.forEach(slot => {
                 const { top, height } = getPosition(slot.start, slot.end);
@@ -558,7 +550,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
 
                             temp[day].push({
                                 course: { id: 'gap', courseCode: 'Gap', time: '', days: '', section: '', color: '' } as CourseRow,
-                                color: 'border-2 border-dashed border-gray-500/50 bg-gray-500/10 text-gray-400',
+                                color: 'border-2 border-dashed border-ink-3/50 bg-ink-3/10 text-ink-3',
                                 isPreview: true, // reuse preview style flag logic partly
                                 isGap: true,
                                 label,
@@ -683,7 +675,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
     const copyImageToClipboard = async () => {
         if (!scheduleRef.current) return;
         try {
-            const blob = await toBlob(scheduleRef.current, { cacheBust: true, backgroundColor: '#0f172a' });
+            const blob = await toBlob(scheduleRef.current, { cacheBust: true });
             if (!blob) throw new Error('Blob generation failed');
             await navigator.clipboard.write([
                 new ClipboardItem({ 'image/png': blob })
@@ -748,7 +740,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
     const downloadImage = async () => {
         if (!scheduleRef.current) return;
         try {
-            const dataUrl = await toPng(scheduleRef.current, { cacheBust: true, backgroundColor: '#0f172a' });
+            const dataUrl = await toPng(scheduleRef.current, { cacheBust: true });
             const link = document.createElement('a');
             link.download = 'my-schedule.png';
             link.href = dataUrl;
@@ -791,7 +783,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
             section: 'Custom', // Keep section 'Custom' for internal logic identification
             days: dayString,
             time: timeString,
-            color: customTag.toLowerCase() === 'work' ? 'bg-yellow-500 text-black' : 'bg-gray-600'
+            color: customTag.toLowerCase() === 'work' ? 'bg-warn text-accent-ink' : 'bg-cat-6'
         };
 
         if (editingId) {
@@ -893,12 +885,12 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
         <div className="flex flex-col lg:flex-row gap-4 w-full h-full">
             {/* Toast Notification */}
             {notification && (
-                <div className={`fixed top-4 right-4 z-[100] px-4 py-3 rounded-lg shadow-xl text-white animate-fade-in-down flex items-center gap-3 pr-8 ${notification.type === 'error' ? 'bg-red-500/90 backdrop-blur' : 'bg-green-500/90 backdrop-blur'}`}>
+                <div className={`fixed top-4 right-4 z-[100] px-4 py-3 rounded-control shadow-float text-accent-ink animate-fade-in-down flex items-center gap-3 pr-8 ${notification.type === 'error' ? 'bg-bad' : 'bg-ok'}`}>
                     {notification.type === 'success' && <FaCheck />}
-                    <span className="font-medium text-sm">{notification.message}</span>
+                    <span className="font-medium text-body">{notification.message}</span>
                     <button
                         onClick={() => setNotification(null)}
-                        className="absolute top-2 right-2 p-1 hover:bg-white/20 rounded-full transition-colors"
+                        className="absolute top-2 right-2 p-1 hover:bg-accent-ink/20 rounded-pill transition-colors duration-150 ease-spring"
                     >
                         <FaTimes size={12} />
                     </button>
@@ -908,34 +900,34 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
             {/* Import Modal */}
             {showImportModal && (
                 <div
-                    className="fixed inset-0 z-[101] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in"
+                    className="fixed inset-0 z-[101] flex items-center justify-center bg-scrim/60 backdrop-blur-md p-4 animate-fade-in"
                     onClick={() => setShowImportModal(false)}
                 >
                     <div
-                        className="bg-[#0f172a]/90 border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl relative overflow-hidden"
+                        className="bg-surface border border-rule rounded-panel p-6 w-full max-w-md shadow-float relative overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Glow effect */}
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-accent-gradient"></div>
 
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                <FaFileImport className="text-indigo-400" /> Import Schedule
+                            <h3 className="text-head font-bold text-ink flex items-center gap-2">
+                                <FaFileImport className="text-accent" /> Import Schedule
                             </h3>
-                            <button onClick={() => setShowImportModal(false)} className="text-gray-400 hover:text-white transition-colors"><FaTimes /></button>
+                            <button onClick={() => setShowImportModal(false)} className="text-ink-3 hover:text-ink transition-colors duration-150 ease-spring"><FaTimes /></button>
                         </div>
 
                         <div className="space-y-4">
                             {/* File Upload Option */}
                             <div
                                 onClick={() => fileInputRef.current?.click()}
-                                className="border-2 border-dashed border-white/10 hover:border-indigo-500/50 hover:bg-white/5 rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all group"
+                                className="border-2 border-dashed border-rule hover:border-accent/50 hover:bg-rule-soft rounded-panel p-6 flex flex-col items-center justify-center cursor-pointer transition-colors duration-150 ease-spring group"
                             >
-                                <div className="p-3 bg-white/5 rounded-full mb-3 group-hover:bg-indigo-500/20 transition-colors">
-                                    <FaCloudUploadAlt className="text-2xl text-gray-400 group-hover:text-indigo-400" />
+                                <div className="p-3 bg-rule-soft rounded-pill mb-3 group-hover:bg-accent/20 transition-colors duration-150 ease-spring">
+                                    <FaCloudUploadAlt className="text-2xl text-ink-3 group-hover:text-accent" />
                                 </div>
-                                <p className="text-sm font-medium text-gray-300">Click to upload JSON file</p>
-                                <p className="text-xs text-gray-500">or drag and drop</p>
+                                <p className="text-body font-medium text-ink-2">Click to upload JSON file</p>
+                                <p className="text-mini text-ink-3">or drag and drop</p>
                                 <input
                                     type="file"
                                     ref={fileInputRef}
@@ -947,10 +939,10 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
 
                             <div className="relative">
                                 <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-white/10"></div>
+                                    <div className="w-full border-t border-rule"></div>
                                 </div>
-                                <div className="relative flex justify-center text-xs">
-                                    <span className="px-2 bg-[#0f172a] text-gray-500 uppercase tracking-wider">Or paste code</span>
+                                <div className="relative flex justify-center text-mini">
+                                    <span className="px-2 bg-surface text-ink-3">or paste code</span>
                                 </div>
                             </div>
 
@@ -958,13 +950,13 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                 value={importText}
                                 onChange={(e) => setImportText(e.target.value)}
                                 placeholder="Paste the export code starting with ||DATA:..."
-                                className="w-full h-24 bg-black/40 border border-white/10 rounded-xl p-3 text-xs font-mono text-gray-300 focus:outline-none focus:border-indigo-500 resize-none placeholder-gray-600 transition-colors"
+                                className="w-full h-24 bg-raised border border-rule rounded-panel p-3 text-mini font-mono text-ink-2 focus:outline-none focus:border-accent resize-none placeholder-ink-3 transition-colors duration-150 ease-spring"
                             />
 
                             <button
                                 onClick={handleImportText}
                                 disabled={!importText}
-                                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+                                className="w-full py-2.5 bg-accent-gradient hover:shadow-hover disabled:opacity-45 disabled:cursor-not-allowed text-accent-ink rounded-pill font-bold text-body transition-shadow duration-150 ease-spring flex items-center justify-center gap-2 shadow-rest"
                             >
                                 <FaCheck /> Import Data
                             </button>
@@ -976,18 +968,18 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
 
 
             {/* Left: Sidebar (Swapped Position -> Right) */}
-            <div className="w-full lg:w-96 glass rounded-xl p-3 flex flex-col shrink-0 lg:h-full h-auto max-h-[500px] lg:max-h-full transition-all lg:order-2">
+            <div className="w-full lg:w-96 glass rounded-panel p-3 flex flex-col shrink-0 lg:h-full h-auto max-h-[500px] lg:max-h-full transition-all lg:order-2">
                 {/* Tabs */}
-                <div className="flex gap-1 p-1 bg-black/20 rounded-lg mb-3">
+                <div className="flex gap-1 p-1 bg-raised rounded-control mb-3">
                     <button
                         onClick={() => setSidebarTab('courses')}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${sidebarTab === 'courses' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                        className={`flex-1 py-1.5 text-mini font-bold rounded-chip transition-colors duration-150 ease-spring ${sidebarTab === 'courses' ? 'bg-accent text-accent-ink shadow-rest' : 'text-ink-3 hover:text-ink'}`}
                     >
                         Courses
                     </button>
                     <button
                         onClick={() => setSidebarTab('custom')}
-                        className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${sidebarTab === 'custom' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                        className={`flex-1 py-1.5 text-mini font-bold rounded-chip transition-colors duration-150 ease-spring ${sidebarTab === 'custom' ? 'bg-accent text-accent-ink shadow-rest' : 'text-ink-3 hover:text-ink'}`}
                     >
                         Custom
                     </button>
@@ -1002,12 +994,12 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                     placeholder="Search courses..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 placeholder-gray-500 pr-8"
+                                    className="w-full bg-raised border border-rule rounded-control px-3 py-2 text-body text-ink focus:outline-none focus:border-accent placeholder-ink-3 pr-8 transition-colors duration-150 ease-spring"
                                 />
                                 {searchTerm && (
                                     <button
                                         onClick={() => setSearchTerm('')}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink transition-colors duration-150 ease-spring"
                                     >
                                         <FaTimes size={12} />
                                     </button>
@@ -1025,7 +1017,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                             if (nextMode !== 'mine') setSelectedMyCourse(null);
                                         }}
                                         title={current.label}
-                                        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-gray-300 hover:text-white transition-colors"
+                                        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-control bg-rule-soft border border-rule hover:bg-rule text-ink-2 hover:text-ink transition-colors duration-150 ease-spring"
                                     >
                                         <Icon size={13} />
                                     </button>
@@ -1048,9 +1040,9 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                                     setCourseListMode('mine');
                                                 }
                                             }}
-                                            className={`flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-full border transition-colors ${isActive
-                                                ? 'bg-indigo-500/15 border-indigo-400/40 text-indigo-200'
-                                                : 'bg-white/[0.035] border-transparent text-gray-400 hover:bg-white/[0.07] hover:text-gray-200'
+                                            className={`flex items-center gap-1 text-micro font-medium px-2 py-1 rounded-pill border transition-colors duration-150 ease-spring ${isActive
+                                                ? 'bg-accent/15 border-accent/40 text-accent'
+                                                : 'bg-rule-soft border-transparent text-ink-3 hover:bg-rule hover:text-ink'
                                                 }`}
                                         >
                                             {isActive && <FaCheck size={8} />}
@@ -1071,23 +1063,23 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                         onClick={() => handleCourseSelect(course)}
                                         onMouseEnter={() => setHoveredCourse(course)}
                                         onMouseLeave={() => setHoveredCourse(prev => prev?.id === course.id ? null : prev)}
-                                        className={`w-full text-left px-3 py-2 rounded-lg border transition-all duration-150 group relative ${isSelected
-                                            ? 'bg-indigo-500/15 border-indigo-400/40'
-                                            : 'bg-white/[0.035] border-white/5 hover:bg-white/[0.07] hover:border-white/10'
+                                        className={`w-full text-left px-3 py-2 rounded-control border transition-colors duration-150 ease-spring group relative ${isSelected
+                                            ? 'bg-accent/15 border-accent/40'
+                                            : 'bg-rule-soft border-transparent hover:bg-rule'
                                             }`}
                                     >
                                         <div className="flex justify-between items-baseline gap-2">
-                                            <span className={`font-semibold tracking-tight text-sm truncate ${isSelected ? 'text-indigo-100' : 'text-gray-200'}`}>
+                                            <span className={`font-semibold tracking-tight text-body truncate ${isSelected ? 'text-accent' : 'text-ink-2'}`}>
                                                 {course.courseCode}
                                             </span>
-                                            <span className={`shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-[10px] font-medium tabular-nums ${isSelected ? 'bg-indigo-400/20 text-indigo-200' : 'bg-white/5 text-gray-400'}`}>
+                                            <span className={`shrink-0 w-5 h-5 flex items-center justify-center rounded-pill text-micro font-medium tabular font-mono ${isSelected ? 'bg-accent/20 text-accent' : 'bg-rule text-ink-3'}`}>
                                                 {course.section}
                                             </span>
                                         </div>
-                                        <div className="text-[11px] text-gray-500 truncate mt-0.5">
+                                        <div className="text-mini text-ink-3 truncate mt-0.5">
                                             {course.time}
                                         </div>
-                                        <div className="flex justify-between items-center mt-1.5 text-[11px] text-gray-400">
+                                        <div className="flex justify-between items-center mt-1.5 text-mini text-ink-3">
                                             <span className="flex items-center gap-1 truncate" title="Faculty">
                                                 <FaChalkboardTeacher className="shrink-0 opacity-60" size={10} />
                                                 {course.facultyCode || 'TBA'}
@@ -1096,7 +1088,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                                 <FaMapMarkerAlt className="shrink-0 opacity-60" size={10} />
                                                 {course.room || 'TBA'}
                                             </span>
-                                            <span className={`flex items-center gap-1 shrink-0 font-medium tabular-nums ${seatAvailabilityColor(course.seat)}`} title="Seats available">
+                                            <span className={`flex items-center gap-1 shrink-0 font-medium tabular font-mono ${seatAvailabilityColor(course.seat)}`} title="Seats available">
                                                 <FaChair className="opacity-70" size={10} />
                                                 {course.seat ?? '—'}
                                             </span>
@@ -1109,42 +1101,42 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                 ) : (
                     <div className="flex flex-col gap-4 h-full overflow-y-auto custom-scrollbar">
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-400 uppercase">Tag Name</label>
+                            <label className="text-mini font-bold text-ink-3">Tag name</label>
                             <input
                                 value={customTag}
                                 onChange={(e) => setCustomTag(e.target.value)}
                                 placeholder="e.g. Work, Gym"
-                                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                                className="w-full bg-raised border border-rule rounded-control px-3 py-2 text-body text-ink focus:outline-none focus:border-accent transition-colors duration-150 ease-spring"
                             />
                             <div className="flex flex-wrap gap-2 mt-2">
                                 {['Work', 'Gym', 'Study', 'Class', 'Bootcamp', 'Contest'].map(tag => (
                                     <button
                                         key={tag}
                                         onClick={() => setCustomTag(tag)}
-                                        className="text-[10px] px-2 py-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 transition-colors"
+                                        className="text-micro px-2 py-1 rounded-pill border border-rule bg-rule-soft hover:bg-rule text-ink-2 transition-colors duration-150 ease-spring"
                                     >
                                         {tag}+
                                     </button>
                                 ))}
                             </div>
                             {customTag.toLowerCase() === 'work' && (
-                                <p className="text-[10px] text-yellow-500 flex items-center gap-1 mt-1">
-                                    <span className="w-2 h-2 rounded-full bg-yellow-500 inline-block"></span>
-                                    Will appear yellow
+                                <p className="text-micro text-warn flex items-center gap-1 mt-1">
+                                    <span className="w-2 h-2 rounded-pill bg-warn inline-block"></span>
+                                    Will appear amber
                                 </p>
                             )}
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-400 uppercase">Days</label>
+                            <label className="text-mini font-bold text-ink-3">Days</label>
                             <div className="grid grid-cols-4 gap-2">
                                 {DAYS.map(day => (
                                     <button
                                         key={day}
                                         onClick={() => toggleDay(day)}
-                                        className={`py-1.5 px-2 rounded-md text-xs font-bold transition-all border border-transparent ${customDays.includes(day)
-                                            ? 'bg-indigo-600 text-white shadow-lg border-indigo-400'
-                                            : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:border-white/10'
+                                        className={`py-1.5 px-2 rounded-pill text-mini font-bold transition-colors duration-150 ease-spring border border-transparent ${customDays.includes(day)
+                                            ? 'bg-accent-gradient text-accent-ink shadow-rest'
+                                            : 'bg-rule-soft text-ink-3 hover:bg-rule hover:border-rule'
                                             }`}
                                     >
                                         {day}
@@ -1154,28 +1146,28 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-400 uppercase">Time</label>
+                            <label className="text-mini font-bold text-ink-3">Time</label>
                             <div className="flex items-center gap-2">
                                 <input
                                     type="time"
                                     value={customStartTime}
                                     onClick={(e) => e.currentTarget.showPicker()}
                                     onChange={(e) => setCustomStartTime(e.target.value)}
-                                    className="bg-black/20 border border-white/10 rounded px-2 py-2 text-sm text-white focus:outline-none cursor-pointer flex-1 text-center hover:bg-white/5 transition-colors"
+                                    className="bg-raised border border-rule rounded-control px-2 py-2 text-body text-ink focus:outline-none cursor-pointer flex-1 text-center hover:bg-rule-soft transition-colors duration-150 ease-spring"
                                 />
-                                <span className="text-gray-500 text-xs font-medium">to</span>
+                                <span className="text-ink-3 text-mini font-medium">to</span>
                                 <input
                                     type="time"
                                     value={customEndTime}
                                     onClick={(e) => e.currentTarget.showPicker()}
                                     onChange={(e) => setCustomEndTime(e.target.value)}
-                                    className="bg-black/20 border border-white/10 rounded px-2 py-2 text-sm text-white focus:outline-none cursor-pointer flex-1 text-center hover:bg-white/5 transition-colors"
+                                    className="bg-raised border border-rule rounded-control px-2 py-2 text-body text-ink focus:outline-none cursor-pointer flex-1 text-center hover:bg-rule-soft transition-colors duration-150 ease-spring"
                                 />
                             </div>
                         </div>
 
                         {/* Tag Stats */}
-                        <div className="space-y-1 pt-2 border-t border-white/5">
+                        <div className="space-y-1 pt-2 border-t border-rule">
                             {Object.entries(tagStats.stats).map(([tag, mins]) => {
                                 // Check if we have unsaved time for this tag
                                 const isEditTag = tagStats.unsavedTag === tag && tagStats.unsavedMins > 0;
@@ -1187,12 +1179,12 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                 };
 
                                 return (
-                                    <div key={tag} className="flex justify-between items-center text-[11px] text-gray-400">
+                                    <div key={tag} className="flex justify-between items-center text-mini text-ink-3">
                                         <span>{tag}</span>
                                         <div className="flex gap-1">
                                             <span>{formatDuration(mins)}</span>
                                             {isEditTag && (
-                                                <span className="opacity-50 text-indigo-300">
+                                                <span className="opacity-70 text-accent">
                                                     (+{formatDuration(tagStats.unsavedMins)})
                                                 </span>
                                             )}
@@ -1202,9 +1194,9 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                             })}
                             {/* If current tag is NEW (not in stats yet) show it purely as unsaved */}
                             {tagStats.unsavedTag && !tagStats.stats[tagStats.unsavedTag] && tagStats.unsavedMins > 0 && (
-                                <div className="flex justify-between items-center text-[11px] text-gray-400">
+                                <div className="flex justify-between items-center text-mini text-ink-3">
                                     <span>{tagStats.unsavedTag}</span>
-                                    <span className="opacity-50 text-indigo-300">
+                                    <span className="opacity-70 text-accent">
                                         (+{(() => {
                                             const m = tagStats.unsavedMins;
                                             const hours = Math.floor(m / 60);
@@ -1220,14 +1212,14 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                             {editingId && (
                                 <button
                                     onClick={cancelEdit}
-                                    className="flex-1 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg font-bold text-sm transition-all"
+                                    className="flex-1 py-2 bg-surface border border-rule hover:bg-rule-soft text-ink rounded-pill font-bold text-body transition-colors duration-150 ease-spring"
                                 >
                                     Cancel
                                 </button>
                             )}
                             <button
                                 onClick={handleAddCustomEvent}
-                                className={`flex-1 py-2 text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${editingId ? 'bg-indigo-500 hover:bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+                                className="flex-1 py-2 bg-accent-gradient hover:shadow-hover text-accent-ink rounded-pill font-bold text-body shadow-rest transition-shadow duration-150 ease-spring flex items-center justify-center gap-2"
                             >
                                 {editingId ? 'Update Event' : 'Add Event+'}
                             </button>
@@ -1237,60 +1229,60 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
             </div>
 
             {/* Right: Schedule Grid */}
-            <div className="flex-1 glass rounded-xl p-3 overflow-hidden flex flex-col lg:order-1">
+            <div className="flex-1 glass rounded-panel p-3 overflow-hidden flex flex-col lg:order-1">
                 <div className="flex justify-between items-center mb-4 shrink-0">
-                    <h2 className="text-xl font-bold text-white">Weekly Schedule</h2>
+                    <h2 className="text-head font-bold text-ink">Weekly Schedule</h2>
                     <div className="flex gap-2">
                         <div className="relative z-50">
                             <button
                                 onClick={() => setExportExpanded(!exportExpanded)}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors text-white ${exportExpanded ? 'bg-indigo-600 hover:bg-indigo-500' : 'bg-white/10 hover:bg-white/20'}`}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-pill text-body transition-colors duration-150 ease-spring ${exportExpanded ? 'bg-accent text-accent-ink' : 'bg-rule-soft hover:bg-rule text-ink'}`}
                                 title="Export Schedule"
                             >
                                 <FaFileExport /> <span className="hidden sm:inline">Export</span>
                             </button>
                             {exportExpanded && (
-                                <div className="absolute top-full left-0 mt-2 w-48 bg-[#0f172a] border border-white/10 rounded-xl shadow-xl p-1.5 flex flex-col gap-1 animate-fade-in origin-top-left overflow-hidden">
+                                <div className="absolute top-full left-0 mt-2 w-48 bg-surface border border-rule rounded-panel shadow-float p-1.5 flex flex-col gap-1 animate-fade-in origin-top-left overflow-hidden">
                                     <button
                                         onClick={copyExportData}
-                                        className="w-full text-left px-3 py-2 hover:bg-white/10 rounded-lg text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-3"
+                                        className="w-full text-left px-3 py-2 hover:bg-rule-soft rounded-control text-body text-ink-2 hover:text-ink transition-colors duration-150 ease-spring flex items-center gap-3"
                                     >
-                                        <FaClipboard className="text-indigo-400" /> Copy JSON
+                                        <FaClipboard className="text-accent" /> Copy JSON
                                     </button>
                                     <button
                                         onClick={downloadExportFile}
-                                        className="w-full text-left px-3 py-2 hover:bg-white/10 rounded-lg text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-3"
+                                        className="w-full text-left px-3 py-2 hover:bg-rule-soft rounded-control text-body text-ink-2 hover:text-ink transition-colors duration-150 ease-spring flex items-center gap-3"
                                     >
-                                        <FaFileCode className="text-purple-400" /> Download JSON
+                                        <FaFileCode className="text-accent-2" /> Download JSON
                                     </button>
                                 </div>
                             )}
                         </div>
-                        <div className="h-4 w-[1px] bg-white/10 my-auto mx-1"></div>
-                        <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Import Schedule">
+                        <div className="h-4 w-[1px] bg-rule my-auto mx-1"></div>
+                        <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Import Schedule">
                             <FaFileImport /> <span className="hidden sm:inline">Import</span>
                         </button>
-                        <div className="h-4 w-[1px] bg-white/10 my-auto mx-1"></div>
-                        <button onClick={copyRoutineText} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Copy Text Only">
+                        <div className="h-4 w-[1px] bg-rule my-auto mx-1"></div>
+                        <button onClick={copyRoutineText} className="flex items-center gap-2 px-3 py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Copy Text Only">
                             <FaCopy /> <span className="hidden sm:inline">Text</span>
                         </button>
-                        <button onClick={copyImageToClipboard} className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white" title="Copy Image">
+                        <button onClick={copyImageToClipboard} className="flex items-center gap-2 px-3 py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Copy Image">
                             <FaClipboard /> <span className="hidden sm:inline">Image</span>
                         </button>
-                        <button onClick={downloadImage} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm transition-colors text-white" title="Download PNG">
+                        <button onClick={downloadImage} className="flex items-center gap-2 px-3 py-1.5 bg-accent-gradient hover:shadow-hover rounded-pill text-body text-accent-ink shadow-rest transition-shadow duration-150 ease-spring" title="Download PNG">
                             <FaDownload /> <span className="hidden sm:inline">PNG</span>
                         </button>
                     </div>
                 </div>
 
                 {/* The Grid Container - Capture Target */}
-                <div ref={scheduleRef} className="p-2 bg-[#0f172a] rounded-lg border border-white/5 w-full h-full flex flex-col">
-                    <div className="flex-1 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-white/5 rounded-lg overflow-hidden border border-white/10 h-full relative">
+                <div ref={scheduleRef} className="p-2 bg-canvas rounded-panel border border-rule w-full h-full flex flex-col">
+                    <div className="flex-1 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-rule-soft rounded-control overflow-hidden border border-rule h-full relative">
 
                         {/* 1. Time Column */}
-                        <div className="relative h-full border-r border-white/10 bg-black/20">
+                        <div className="relative h-full border-r border-rule bg-raised">
                             {/* Header */}
-                            <div className="h-8 border-b border-white/10 flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-black/10 absolute w-full top-0 z-10">Time</div>
+                            <div className="h-8 border-b border-rule flex items-center justify-center text-micro font-bold text-ink-3 uppercase tracking-wider bg-raised absolute w-full top-0 z-10">Time</div>
 
                             {/* Time Labels */}
                             <div className="absolute top-8 bottom-0 w-full">
@@ -1299,10 +1291,10 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                     return (
                                         <div
                                             key={i}
-                                            className="absolute w-full text-right pr-2 text-[10px] text-gray-400 font-mono -translate-y-1/2 flex items-center justify-end"
+                                            className="absolute w-full text-right pr-2 text-micro text-ink-3 font-mono -translate-y-1/2 flex items-center justify-end"
                                             style={{ top }}
                                         >
-                                            <span className="bg-[#0f172a]/80 px-1 rounded">{slot.label}</span>
+                                            <span className="bg-surface/80 px-1 rounded-chip">{slot.label}</span>
                                         </div>
                                     );
                                 })}
@@ -1311,9 +1303,9 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
 
                         {/* 2. Day Columns */}
                         {DAYS.map(day => (
-                            <div key={day} className="relative h-full border-r border-white/10 last:border-r-0">
+                            <div key={day} className="relative h-full border-r border-rule last:border-r-0">
                                 {/* Header */}
-                                <div className="h-8 border-b border-white/10 flex items-center justify-center text-xs font-bold text-gray-200 bg-black/20 absolute w-full top-0 z-10">
+                                <div className="h-8 border-b border-rule flex items-center justify-center text-body font-bold text-ink bg-raised absolute w-full top-0 z-10">
                                     {day}
                                 </div>
 
@@ -1329,7 +1321,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                         return (
                                             <div
                                                 key={`line-${i}`}
-                                                className="absolute w-full border-t border-white/5 pointer-events-none"
+                                                className="absolute w-full border-t border-rule pointer-events-none"
                                                 style={{ top }}
                                             />
                                         );
@@ -1339,8 +1331,8 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                     {daySchedules[day]?.map((item, i) => (
                                         <div
                                             key={i}
-                                            className={`absolute inset-x-0 mx-0.5 rounded shadow-lg p-1 text-xs text-white border border-white/10 flex flex-col justify-center items-center transition-all cursor-default group overflow-hidden ${item.color} ${item.isPreview
-                                                ? 'opacity-50 border-dashed border-white/40 pointer-events-none'
+                                            className={`absolute inset-x-0 mx-0.5 rounded-control shadow-rest p-1 text-mini text-accent-ink border border-accent-ink/20 flex flex-col justify-center items-center transition-transform duration-150 ease-spring cursor-default group overflow-hidden ${item.color} ${item.isPreview
+                                                ? 'opacity-50 border-dashed border-ink-3/50 pointer-events-none'
                                                 : item.isGap ? 'z-0' : 'hover:scale-[1.02] hover:z-20'
                                                 }`}
                                             onMouseDown={(e) => {
@@ -1360,7 +1352,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                             }}
                                         >
                                             {item.isGap ? (
-                                                <div className="flex flex-col items-center justify-center text-[10px] font-mono tracking-wider opacity-70 leading-tight">
+                                                <div className="flex flex-col items-center justify-center text-micro font-mono tracking-wider opacity-70 leading-tight">
                                                     <span className="font-bold uppercase text-[9px] mb-0.5">Gap</span>
                                                     <span>{item.label}</span>
                                                 </div>
@@ -1368,12 +1360,12 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                                 <>
                                                     {!item.isPreview && (
                                                         <div
-                                                            className="absolute top-0.5 right-0.5 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-30"
+                                                            className="absolute top-0.5 right-0.5 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 ease-spring flex gap-1 z-30"
                                                         >
                                                             {/* Edit Button */}
                                                             {item.course.section === 'Custom' && (
                                                                 <div
-                                                                    className="p-0.5 cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
+                                                                    className="p-0.5 cursor-pointer text-accent-ink/70 hover:text-accent-ink bg-ink/20 rounded-pill"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         handleEditEvent(item.course);
@@ -1386,7 +1378,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                                             )}
                                                             {/* Delete Button */}
                                                             <div
-                                                                className="p-0.5 cursor-pointer text-white/70 hover:text-white bg-black/20 rounded-full"
+                                                                className="p-0.5 cursor-pointer text-accent-ink/70 hover:text-accent-ink bg-ink/20 rounded-pill"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     handleCourseSelect(item.course);
@@ -1400,7 +1392,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                                     <div className="font-bold leading-tight text-center truncate w-full">{item.course.courseCode}</div>
                                                     {item.course.section === 'Custom' ? (
                                                         <div className="flex flex-col items-center w-full">
-                                                            <div className="text-[10px] opacity-80 text-center truncate w-full mt-0.5">
+                                                            <div className="text-micro opacity-80 text-center truncate w-full mt-0.5">
                                                                 {(() => {
                                                                     const diff = (parseFloat(item.style.height)) * TOTAL_MINS / 100;
                                                                     const h = Math.floor(diff / 60);
@@ -1408,7 +1400,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                                                     return `${h > 0 ? h + ' hr ' : ''}${m > 0 ? m + ' min' : ''}`;
                                                                 })()}
                                                             </div>
-                                                            <div className="text-[11.5px] font-semibold opacity-90 text-center truncate w-full mt-2.5">
+                                                            <div className="text-mini font-semibold opacity-90 text-center truncate w-full mt-2.5">
                                                                 {(() => {
                                                                     const top = parseFloat(item.style.top);
                                                                     const height = parseFloat(item.style.height);
@@ -1420,9 +1412,9 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <div className="text-[11px] font-extrabold text-center truncate w-full opacity-90">{item.course.facultyCode}</div>
-                                                            <div className="text-[9px] opacity-80 text-center truncate w-full">Sec {item.course.section}</div>
-                                                            <div className="hidden sm:block text-[8px] opacity-60 text-center uppercase tracking-wide group-hover:opacity-100 transition-opacity truncate w-full">{item.course.room}</div>
+                                                            <div className="text-mini font-extrabold text-center truncate w-full opacity-90">{item.course.facultyCode}</div>
+                                                            <div className="text-micro opacity-80 text-center truncate w-full">Sec {item.course.section}</div>
+                                                            <div className="hidden sm:block text-[8px] opacity-60 text-center uppercase tracking-wide group-hover:opacity-100 transition-opacity duration-150 ease-spring truncate w-full">{item.course.room}</div>
                                                         </>
                                                     )}
                                                 </>
@@ -1435,7 +1427,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                     </div>
 
                     {/* Footer Logo for Screenshot */}
-                    <div className="text-right mt-2 text-gray-400 text-xs font-mono font-semibold opacity-90 shrink-0">
+                    <div className="text-right mt-2 text-ink-3 text-micro font-mono font-semibold opacity-90 shrink-0">
                         Generated by course-koi.vercel.app
                     </div>
                 </div>
