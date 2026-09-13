@@ -229,7 +229,7 @@ function CourseKoiApp() {
           >
             <div className="w-full h-full">
               <p className="text-gray-400 mb-4 px-2 hidden">Select from your <strong>Starred</strong> courses to build your weekly schedule.</p>
-              <ScheduleView courses={starredCourses} allCourses={sortedData} />
+              <ScheduleView courses={starredCourses} allCourses={sortedData} savedCourses={savedCourses} />
             </div>
           </div>
         </div>

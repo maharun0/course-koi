@@ -3,13 +3,22 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { CourseRow } from '@/types/course';
 import { parseCourseTime } from '@/utils/timeUtils';
-import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaFileExport, FaCloudUploadAlt, FaFileCode } from 'react-icons/fa';
+import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaFileExport, FaCloudUploadAlt, FaFileCode, FaStar, FaLayerGroup, FaBook } from 'react-icons/fa';
 import { toPng, toBlob } from 'html-to-image';
 
 interface ScheduleViewProps {
     courses: CourseRow[]; // This represents starred courses
     allCourses: CourseRow[]; // New prop for all courses
+    savedCourses: CourseRow[]; // "My Courses" added via the sidebar
 }
+
+type CourseListMode = 'starred' | 'all' | 'mine';
+
+const COURSE_LIST_MODES: { mode: CourseListMode; icon: typeof FaStar; label: string }[] = [
+    { mode: 'starred', icon: FaStar, label: 'Showing starred sections' },
+    { mode: 'all', icon: FaLayerGroup, label: 'Showing all sections' },
+    { mode: 'mine', icon: FaBook, label: 'Showing my courses' },
+];
 
 // Define the standard time slots requested
 const TIME_SLOTS = [
@@ -28,10 +37,12 @@ const START_OF_DAY = 8 * 60; // 08:00 AM
 const END_OF_DAY = 19 * 60 + 30; // 07:30 PM (End of last slot)
 const TOTAL_MINS = END_OF_DAY - START_OF_DAY;
 
-export default function ScheduleView({ courses, allCourses }: ScheduleViewProps) {
+export default function ScheduleView({ courses, allCourses, savedCourses }: ScheduleViewProps) {
     const [selectedCourses, setSelectedCourses] = useState<CourseRow[]>([]);
     const [sidebarTab, setSidebarTab] = useState<'courses' | 'custom'>('courses');
     const [searchTerm, setSearchTerm] = useState('');
+    const [courseListMode, setCourseListMode] = useState<CourseListMode>('starred');
+    const [hoveredCourse, setHoveredCourse] = useState<CourseRow | null>(null);
 
     // Custom Event State
     const [customTag, setCustomTag] = useState('');
@@ -464,9 +475,12 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         if (previewCourse) {
             coursesToRender.push(previewCourse);
         }
+        if (hoveredCourse && !selectedCourses.some(c => c.id === hoveredCourse.id)) {
+            coursesToRender.push({ ...hoveredCourse, id: 'preview-hover' });
+        }
 
         coursesToRender.forEach((course, idx) => {
-            const isPreview = course.id === 'preview-custom';
+            const isPreview = course.id === 'preview-custom' || course.id === 'preview-hover';
             const schedule = parseCourseTime(course.time, course.id, course.courseCode, course.section || '');
             if (!schedule) return;
 
@@ -553,7 +567,7 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
         }
 
         return temp;
-    }, [selectedCourses, previewCourse, hoverState, dragState.isDragging]);
+    }, [selectedCourses, previewCourse, hoveredCourse, hoverState, dragState.isDragging]);
 
 
 
@@ -843,36 +857,28 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
     };
 
     // --- SEARCH & FILTER OPTIMIZATION ---
+    const savedCourseCodes = useMemo(
+        () => new Set(savedCourses.map(c => c.courseCode)),
+        [savedCourses]
+    );
+
     const displayedCourses = useMemo(() => {
+        const baseList = courseListMode === 'starred'
+            ? courses
+            : courseListMode === 'mine'
+                ? allCourses.filter(c => savedCourseCodes.has(c.courseCode))
+                : allCourses;
+
         const searchLower = searchTerm.toLowerCase().trim();
-        const isSearching = searchLower.length > 0;
-
-        // When not searching: show ONLY starred courses (the whole point of this panel)
-        if (!isSearching) {
-            return courses;
+        if (!searchLower) {
+            return baseList.slice(0, 50);
         }
 
-        // When searching: search across all courses, starred first
-        const starredIds = new Set(courses.map(c => c.id));
-        const starredMatches: CourseRow[] = [];
-        const regularMatches: CourseRow[] = [];
-
-        // Single pass O(N) filtering and partitioning
-        for (const course of allCourses) {
-            if (course.courseCode.toLowerCase().includes(searchLower) ||
-                (course.section && course.section.toString().includes(searchLower))) {
-
-                if (starredIds.has(course.id)) {
-                    starredMatches.push(course);
-                } else {
-                    regularMatches.push(course);
-                }
-            }
-        }
-
-        // Starred first, then other matches. Slice to limit.
-        return [...starredMatches, ...regularMatches].slice(0, 50);
-    }, [allCourses, courses, searchTerm]);
+        return baseList.filter(course =>
+            course.courseCode.toLowerCase().includes(searchLower) ||
+            (course.section && course.section.toString().includes(searchLower))
+        ).slice(0, 50);
+    }, [allCourses, courses, savedCourseCodes, courseListMode, searchTerm]);
 
     return (
         <div className="flex flex-col lg:flex-row gap-4 w-full h-full">
@@ -980,22 +986,38 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
 
                 {sidebarTab === 'courses' ? (
                     <>
-                        <div className="mb-3 relative">
-                            <input
-                                type="text"
-                                placeholder="Search courses..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 placeholder-gray-500 pr-8"
-                            />
-                            {searchTerm && (
-                                <button
-                                    onClick={() => setSearchTerm('')}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                                >
-                                    <FaTimes size={12} />
-                                </button>
-                            )}
+                        <div className="mb-3 flex gap-2">
+                            <div className="relative flex-1">
+                                <input
+                                    type="text"
+                                    placeholder="Search courses..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 placeholder-gray-500 pr-8"
+                                />
+                                {searchTerm && (
+                                    <button
+                                        onClick={() => setSearchTerm('')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                                    >
+                                        <FaTimes size={12} />
+                                    </button>
+                                )}
+                            </div>
+                            {(() => {
+                                const currentIndex = COURSE_LIST_MODES.findIndex(m => m.mode === courseListMode);
+                                const current = COURSE_LIST_MODES[currentIndex];
+                                const Icon = current.icon;
+                                return (
+                                    <button
+                                        onClick={() => setCourseListMode(COURSE_LIST_MODES[(currentIndex + 1) % COURSE_LIST_MODES.length].mode)}
+                                        title={current.label}
+                                        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-gray-300 hover:text-white transition-colors"
+                                    >
+                                        <Icon size={13} />
+                                    </button>
+                                );
+                            })()}
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
                             {/* Render Filtered All Courses */}
@@ -1005,6 +1027,8 @@ export default function ScheduleView({ courses, allCourses }: ScheduleViewProps)
                                     <button
                                         key={course.id}
                                         onClick={() => handleCourseSelect(course)}
+                                        onMouseEnter={() => setHoveredCourse(course)}
+                                        onMouseLeave={() => setHoveredCourse(prev => prev?.id === course.id ? null : prev)}
                                         className={`w-full text-left p-2 rounded-lg border transition-all duration-200 group relative ${isSelected
                                             ? 'bg-indigo-600/90 border-indigo-500 shadow-md transform scale-[1.02]'
                                             : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-gray-400'
