@@ -43,6 +43,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
     const [searchTerm, setSearchTerm] = useState('');
     const [courseListMode, setCourseListMode] = useState<CourseListMode>('starred');
     const [hoveredCourse, setHoveredCourse] = useState<CourseRow | null>(null);
+    const [selectedMyCourse, setSelectedMyCourse] = useState<string | null>(null);
 
     // Custom Event State
     const [customTag, setCustomTag] = useState('');
@@ -866,7 +867,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
         const baseList = courseListMode === 'starred'
             ? courses
             : courseListMode === 'mine'
-                ? allCourses.filter(c => savedCourseCodes.has(c.courseCode))
+                ? allCourses.filter(c => savedCourseCodes.has(c.courseCode) && (!selectedMyCourse || c.courseCode === selectedMyCourse))
                 : allCourses;
 
         const searchLower = searchTerm.toLowerCase().trim();
@@ -878,7 +879,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
             course.courseCode.toLowerCase().includes(searchLower) ||
             (course.section && course.section.toString().includes(searchLower))
         ).slice(0, 50);
-    }, [allCourses, courses, savedCourseCodes, courseListMode, searchTerm]);
+    }, [allCourses, courses, savedCourseCodes, courseListMode, selectedMyCourse, searchTerm]);
 
     return (
         <div className="flex flex-col lg:flex-row gap-4 w-full h-full">
@@ -1010,7 +1011,11 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                 const Icon = current.icon;
                                 return (
                                     <button
-                                        onClick={() => setCourseListMode(COURSE_LIST_MODES[(currentIndex + 1) % COURSE_LIST_MODES.length].mode)}
+                                        onClick={() => {
+                                            const nextMode = COURSE_LIST_MODES[(currentIndex + 1) % COURSE_LIST_MODES.length].mode;
+                                            setCourseListMode(nextMode);
+                                            if (nextMode !== 'mine') setSelectedMyCourse(null);
+                                        }}
                                         title={current.label}
                                         className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-gray-300 hover:text-white transition-colors"
                                     >
@@ -1019,6 +1024,34 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                 );
                             })()}
                         </div>
+
+                        {savedCourses.length > 0 && (
+                            <div className="mb-3 flex flex-wrap gap-1.5">
+                                {savedCourses.map(c => {
+                                    const isActive = courseListMode === 'mine' && selectedMyCourse === c.courseCode;
+                                    return (
+                                        <button
+                                            key={c.courseCode}
+                                            onClick={() => {
+                                                if (isActive) {
+                                                    setSelectedMyCourse(null);
+                                                } else {
+                                                    setSelectedMyCourse(c.courseCode);
+                                                    setCourseListMode('mine');
+                                                }
+                                            }}
+                                            className={`text-[10px] px-2 py-1 rounded-full border transition-colors ${isActive
+                                                ? 'bg-indigo-600 border-indigo-500 text-white'
+                                                : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'
+                                                }`}
+                                        >
+                                            {c.courseCode}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+
                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
                             {/* Render Filtered All Courses */}
                             {displayedCourses.map(course => {
