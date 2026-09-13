@@ -6,8 +6,11 @@ COURSE_SYNC_ENABLED repo variable).
 """
 
 import csv
+import json
 import sys
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import requests
 from bs4 import BeautifulSoup
@@ -15,8 +18,10 @@ from bs4 import BeautifulSoup
 SOURCE_URL = "https://rds4.northsouth.ac.bd/offered_courses"
 HTML_SNAPSHOT_PATH = Path("data/response.html")
 OUTPUT_CSV_PATH = Path("public/courses.csv")
+LAST_UPDATED_PATH = Path("public/last_updated.json")
 HEADERS = ["Course Code", "Credit", "Section", "Faculty", "Days", "Time", "Room", "Seat"]
 MIN_EXPECTED_ROWS = 1000
+DHAKA_TZ = ZoneInfo("Asia/Dhaka")
 
 
 def fetch_html() -> str:
@@ -77,6 +82,13 @@ def main() -> None:
 
     HTML_SNAPSHOT_PATH.write_text(html, encoding="utf-8")
     write_csv(rows)
+
+    now = datetime.now(DHAKA_TZ)
+    LAST_UPDATED_PATH.write_text(
+        json.dumps({"lastUpdated": now.strftime("%d %B %Y, %I:%M %p")}),
+        encoding="utf-8",
+    )
+
     print(f"Synced {len(rows)} course rows to {OUTPUT_CSV_PATH}")
 
 

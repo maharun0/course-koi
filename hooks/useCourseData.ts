@@ -9,6 +9,14 @@ export default function useCourseData() {
   const [coursePriorities, setCoursePriorities] = useLocalStorage<Record<string, number>>('coursePriorities', {});
   const [inputCourse, setInputCourse] = useState('');
   const [showDialog, setShowDialog] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/last_updated.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setLastUpdated(data?.lastUpdated ?? null))
+      .catch(() => setLastUpdated(null));
+  }, []);
 
   useEffect(() => {
     fetch('/courses.csv')
@@ -53,6 +61,7 @@ export default function useCourseData() {
 
   return {
     rows,
+    lastUpdated,
     savedCourses,
     setSavedCourses,
     starredCourses,
