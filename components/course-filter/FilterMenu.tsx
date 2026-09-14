@@ -4,9 +4,12 @@ import { useEffect, useRef } from 'react';
 import { Dispatch, SetStateAction } from 'react';
 import { CourseRow } from '@/types/course';
 import { FaFilter, FaSearch, FaTimes, FaPlus } from 'react-icons/fa';
+import { CourseListMode, CourseListModeButton } from './courseListMode';
 
 interface FilterMenuProps {
   view: 'all' | 'starred';
+  listMode: CourseListMode;
+  setListMode: (mode: CourseListMode) => void;
   query: string;
   setQuery: (value: string) => void;
   filterColumns: string[];
@@ -24,6 +27,8 @@ interface FilterMenuProps {
 
 export default function FilterMenu({
   view,
+  listMode,
+  setListMode,
   query,
   setQuery,
   filterColumns,
@@ -112,6 +117,10 @@ export default function FilterMenu({
             </button>
           )}
         </div>
+
+        {/* Course-list mode — same three states, order and labels as the
+            Schedule tab's section list, from one shared control. */}
+        <CourseListModeButton mode={listMode} onChange={setListMode} variant="toolbar" />
 
         {/* Filter Toggle */}
         <div className="relative shrink-0">

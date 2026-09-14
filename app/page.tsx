@@ -55,9 +55,11 @@ function CourseKoiApp() {
     setFilterColumns,
     showFilterMenu,
     setShowFilterMenu,
+    listMode,
+    setListMode,
     filteredData,
     starredFilteredData,
-  } = useFiltering(rows, starredCourses, coursePriorities);
+  } = useFiltering(rows, starredCourses, coursePriorities, savedCourses);
 
   const { sorts, toggleSort, sortedData, starredSortedData } = useSorting(filteredData, starredFilteredData);
 
@@ -146,11 +148,10 @@ function CourseKoiApp() {
             things carry the "this opens a panel" affordance that a bare
             hamburger did not: a sidebar glyph that depicts the panel itself and
             flips to its collapse counterpart while open, a button chassis so it
-            reads as a control rather than a page title, and a count of what is
-            inside so it reads as a container. */}
+            reads as a control rather than a page title. */}
         <button
           onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
-          className="flex items-center gap-2 h-9 pl-2.5 pr-2 rounded-control border border-rule bg-canvas text-body font-medium text-ink-2 hover:text-ink hover:border-accent hover:bg-rule-soft aria-expanded:text-accent aria-expanded:border-accent transition-colors duration-150 cursor-pointer shrink-0"
+          className="flex items-center gap-2 h-9 px-2.5 rounded-control border border-rule bg-canvas text-body font-medium text-ink-2 hover:text-ink hover:border-accent hover:bg-rule-soft aria-expanded:text-accent aria-expanded:border-accent transition-colors duration-150 cursor-pointer shrink-0"
           title={sidebarCollapsed ? 'Open courses panel' : 'Close courses panel'}
           aria-label={sidebarCollapsed ? 'Open courses panel' : 'Close courses panel'}
           aria-expanded={!sidebarCollapsed}
@@ -162,11 +163,6 @@ function CourseKoiApp() {
             <TbLayoutSidebarLeftCollapse size={19} className="shrink-0" />
           )}
           <span className="hidden lg:inline">Courses</span>
-          {savedCourses.length > 0 && (
-            <span className="min-w-5 h-5 px-1.5 grid place-items-center rounded-pill bg-accent text-accent-ink text-micro font-semibold tabular-nums">
-              {savedCourses.length}
-            </span>
-          )}
         </button>
 
         {/* Brand lock-up — avatar + wordmark sized to read as one mark */}
@@ -208,20 +204,26 @@ function CourseKoiApp() {
           </span>
         </div>
 
-        {/* Right cluster — freshness, view switcher, then the external link */}
-        <div className="ml-auto flex items-center gap-2 lg:gap-3 shrink-0">
-          <span
-            className="hidden lg:flex flex-col items-end whitespace-nowrap"
-            title={lastUpdated ? `Last updated: ${lastUpdated}` : 'Waiting for the latest sync'}
-          >
-            <span className="flex items-center gap-1.5 text-micro text-ink-3">
-              <span className="w-1.5 h-1.5 rounded-pill bg-ok shrink-0" />
-              Updated
-            </span>
-            <span className="text-mini font-medium text-ink-2 tabular-nums">
-              {shortUpdatedLabel(lastUpdated)}
-            </span>
+        <div className="hidden lg:block w-px h-7 bg-rule shrink-0 ml-1" />
+
+        {/* Freshness stamp — sits with the brand rather than the controls: it
+            describes the data the page is showing, it is not something you
+            operate. Left-aligned on its own so both lines start on one edge. */}
+        <span
+          className="hidden lg:flex flex-col items-start whitespace-nowrap shrink-0"
+          title={lastUpdated ? `Last updated: ${lastUpdated}` : 'Waiting for the latest sync'}
+        >
+          <span className="flex items-center gap-1.5 text-micro text-ink-3">
+            <span className="w-1.5 h-1.5 rounded-pill bg-ok shrink-0" />
+            Updated
           </span>
+          <span className="text-mini font-medium text-ink-2 tabular-nums">
+            {shortUpdatedLabel(lastUpdated)}
+          </span>
+        </span>
+
+        {/* Right cluster — view switcher, then the external link */}
+        <div className="ml-auto flex items-center gap-2 lg:gap-3 shrink-0">
 
           {/* View switcher — same height, radius and border language as the
               GitHub button beside it, so the right cluster reads as one set. */}
@@ -349,6 +351,8 @@ function CourseKoiApp() {
                 setFilterColumns={setFilterColumns}
                 showFilterMenu={showFilterMenu}
                 setShowFilterMenu={setShowFilterMenu}
+                listMode={listMode}
+                setListMode={setListMode}
                 selectedAllCourses={selectedAllCourses}
                 setSelectedAllCourses={setSelectedAllCourses}
                 selectedStarredCourses={selectedStarredCourses}

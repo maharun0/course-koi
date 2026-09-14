@@ -4,8 +4,9 @@ import { useMemo, useState, useEffect, useRef, memo } from 'react';
 import { CourseRow } from '@/types/course';
 import { parseCourseTime } from '@/utils/timeUtils';
 import { seatAvailabilityColor } from '@/utils/courseDisplay';
-import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaFileExport, FaCloudUploadAlt, FaFileCode, FaStar, FaLayerGroup, FaBook, FaChalkboardTeacher, FaChair, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaFileExport, FaCloudUploadAlt, FaFileCode, FaStar, FaChalkboardTeacher, FaChair, FaMapMarkerAlt } from 'react-icons/fa';
 import { toPng, toBlob } from 'html-to-image';
+import { CourseListMode, CourseListModeButton } from './courseListMode';
 
 interface ScheduleViewProps {
     courses: CourseRow[]; // This represents starred courses
@@ -14,14 +15,6 @@ interface ScheduleViewProps {
     starredCourses: CourseRow[];
     toggleStar: (course: CourseRow) => void;
 }
-
-type CourseListMode = 'starred' | 'all' | 'mine';
-
-const COURSE_LIST_MODES: { mode: CourseListMode; icon: typeof FaStar; label: string }[] = [
-    { mode: 'starred', icon: FaStar, label: 'Showing starred sections' },
-    { mode: 'all', icon: FaLayerGroup, label: 'Showing all sections' },
-    { mode: 'mine', icon: FaBook, label: 'Showing my courses' },
-];
 
 // Define the standard time slots requested
 const TIME_SLOTS = [
@@ -1006,24 +999,13 @@ function ScheduleView({ courses, allCourses, savedCourses, starredCourses, toggl
                                     </button>
                                 )}
                             </div>
-                            {(() => {
-                                const currentIndex = COURSE_LIST_MODES.findIndex(m => m.mode === courseListMode);
-                                const current = COURSE_LIST_MODES[currentIndex];
-                                const Icon = current.icon;
-                                return (
-                                    <button
-                                        onClick={() => {
-                                            const nextMode = COURSE_LIST_MODES[(currentIndex + 1) % COURSE_LIST_MODES.length].mode;
-                                            setCourseListMode(nextMode);
-                                            if (nextMode !== 'mine') setSelectedMyCourse(null);
-                                        }}
-                                        title={current.label}
-                                        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-control bg-rule-soft border border-rule hover:bg-rule text-ink-2 hover:text-ink transition-colors duration-150 ease-spring"
-                                    >
-                                        <Icon size={13} />
-                                    </button>
-                                );
-                            })()}
+                            <CourseListModeButton
+                                mode={courseListMode}
+                                onChange={(nextMode) => {
+                                    setCourseListMode(nextMode);
+                                    if (nextMode !== 'mine') setSelectedMyCourse(null);
+                                }}
+                            />
                         </div>
 
                         {savedCourses.length > 0 && (

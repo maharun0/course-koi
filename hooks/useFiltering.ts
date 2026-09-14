@@ -1,12 +1,23 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { CourseRow } from '@/types/course';
+import { CourseListMode } from '@/components/course-filter/courseListMode';
 
 export default function useFiltering(
   rows: CourseRow[],
   starredCourses: CourseRow[],
-  coursePriorities: Record<string, number>
+  coursePriorities: Record<string, number>,
+  savedCourses: CourseRow[]
 ) {
-  const [view, setView] = useState<'all' | 'starred'>('all');
+  // The three-state list mode is the source of truth; `view` stays exported as
+  // the two-state value the table and chips already branch on, derived from it.
+  // "mine" reads from the full row set like "all", just narrowed to the courses
+  // in My Courses — so it maps to view 'all'.
+  const [listMode, setListMode] = useState<CourseListMode>('all');
+  const view: 'all' | 'starred' = listMode === 'starred' ? 'starred' : 'all';
+  const setView = useCallback(
+    (next: 'all' | 'starred') => setListMode(next === 'starred' ? 'starred' : 'all'),
+    []
+  );
   const [query, setQuery] = useState('');
   const [starredQuery, setStarredQuery] = useState('');
   const [activeCourse, setActiveCourse] = useState<string | null>(null);
@@ -23,6 +34,10 @@ export default function useFiltering(
     }));
 
     if (activeCourse) base = base.filter((r) => r.courseCode === activeCourse);
+    if (listMode === 'mine') {
+      const myCodes = new Set(savedCourses.map((c) => c.courseCode));
+      base = base.filter((r) => myCodes.has(r.courseCode));
+    }
     if (selectedAllCourses.length > 0) {
       base = base.filter((r) => selectedAllCourses.includes(r.courseCode));
     }
@@ -35,7 +50,7 @@ export default function useFiltering(
         return typeof value === 'string' && value.toLowerCase().includes(q);
       })
     );
-  }, [rows, query, activeCourse, coursePriorities, selectedAllCourses, starredCourses, filterColumns]);
+  }, [rows, query, activeCourse, coursePriorities, selectedAllCourses, starredCourses, filterColumns, listMode, savedCourses]);
 
   const starredFilteredData = useMemo(() => {
     const base = starredCourses.map((row) => ({
@@ -62,6 +77,8 @@ export default function useFiltering(
   return {
     view,
     setView,
+    listMode,
+    setListMode,
     query,
     setQuery,
     starredQuery,
