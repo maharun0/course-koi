@@ -197,13 +197,14 @@ function CourseKoiApp() {
         <div className="relative flex-1 w-full isolate">
           {/* List View */}
           <div
-            className={`absolute inset-0 w-full h-full overflow-y-auto custom-scrollbar transition-opacity duration-150 ease-spring ${activeTab === 'list'
+            className={`absolute inset-0 w-full h-full flex flex-col transition-opacity duration-150 ease-spring ${activeTab === 'list'
               ? 'opacity-100 z-10'
               : 'opacity-0 z-0 pointer-events-none'
               }`}
             style={{ contentVisibility: activeTab === 'list' ? 'visible' : 'hidden' }}
           >
-            <div className="pb-4"> {/* Padding bottom for scroll content */}
+            {/* Fixed section: search/filter bar + course chips never scroll away */}
+            <div className="shrink-0 px-8 md:px-24 lg:px-32 xl:px-40">
               <FilterMenu
                 view={view}
                 query={view === 'all' ? query : starredQuery}
@@ -220,6 +221,9 @@ function CourseKoiApp() {
                 starredCourses={starredCourses}
                 onOpenSidebar={() => setSidebarCollapsed(false)}
               />
+            </div>
+            {/* Scrollable section: table header stays pinned, only rows scroll */}
+            <div className="flex-1 overflow-auto custom-scrollbar pb-4 px-8 md:px-24 lg:px-32 xl:px-40">
               <CourseTable
                 sortedData={view === 'all' ? sortedData : starredSortedData}
                 sorts={sorts}

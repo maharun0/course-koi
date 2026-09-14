@@ -78,11 +78,14 @@ export default function CourseTable({
         Tip: Scroll horizontally for more columns
       </div>
 
-      {/* Borderless table: interior rules only, no outer box/shadow-2xl card */}
-      <div className="hidden md:block rounded-panel overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* Borderless table: interior rules only, no outer box/shadow-2xl card.
+          No nested horizontal-scroll wrapper here — that would itself become
+          a scroll container (overflow-x non-visible forces overflow-y:auto
+          per spec) and break the sticky thead's reference to the real
+          scrolling ancestor. Horizontal scroll is handled by the parent. */}
+      <div className="hidden md:block">
           <table className="w-full text-center">
-            <thead className="border-b border-rule">
+            <thead className="border-b border-rule bg-canvas sticky top-0 z-10">
               <tr>
                 <th className={`px-2 py-2 text-center text-mini font-semibold text-ink-3 uppercase tracking-wider ${widths.index}`}>#</th>
                 {header('Course', 'courseCode', widths.course)}
@@ -169,7 +172,6 @@ export default function CourseTable({
               )}
             </tbody>
           </table>
-        </div>
       </div>
 
       {/* Mobile Card View */}
