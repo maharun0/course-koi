@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { FaStar, FaSortUp, FaSortDown, FaSort, FaClock, FaMapMarkerAlt, FaChalkboardTeacher, FaChair } from 'react-icons/fa';
 import { CourseRow, SortKey, SortConfig } from '@/types/course';
 import { seatAvailabilityColor } from '@/utils/courseDisplay';
@@ -13,7 +14,7 @@ interface CourseTableProps {
   starredCourses: CourseRow[];
 }
 
-export default function CourseTable({
+function CourseTable({
   sortedData,
   sorts,
   toggleSort,
@@ -177,7 +178,7 @@ export default function CourseTable({
           2x2-boxed-grid card, but text sizes are chosen for legibility, not
           just density. */}
       <div className="md:hidden space-y-2">
-        {sortedData.map((r) => {
+        {sortedData.slice(0, 100).map((r) => {
           const isStarred = starredCourses.some((c) => c.id === r.id);
           return (
             <div key={r.id} className="glass rounded-panel p-2.5 space-y-1 relative overflow-hidden">
@@ -248,7 +249,23 @@ export default function CourseTable({
             </div>
           )
         })}
+
+        {sortedData.length > 100 && (
+          <div className="px-4 py-3 text-center text-mini text-ink-3 italic">
+            Showing first 100 of {sortedData.length} courses. Use search/filters to find specific items.
+          </div>
+        )}
+        {sortedData.length === 0 && (
+          <div className="px-4 py-10 text-center text-ink-3">
+            <p className="text-lead font-medium">No courses found</p>
+            <p className="text-body">Try adjusting your filters or search query.</p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
+// Memoized: this is the heaviest subtree on the page, and it must not
+// re-render when unrelated state (e.g. the sidebar drawer) changes.
+export default memo(CourseTable);

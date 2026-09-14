@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import CourseTable from '@/components/course-filter/CourseTable';
 import FilterMenu from '@/components/course-filter/FilterMenu';
@@ -84,21 +84,25 @@ function CourseKoiApp() {
     router.push(`/?${params.toString()}`);
   };
 
-  const toggleStar = (course: CourseRow) => {
+  // Wrapped so the memoized CourseTable/ScheduleView below don't re-render on
+  // unrelated state changes (e.g. opening the sidebar). toggleStar keeps its
+  // dependency on starredCourses — that identity change is intentional, since
+  // the star icons genuinely need to re-render when it changes.
+  const toggleStar = useCallback((course: CourseRow) => {
     if (starredCourses.some((c) => c.id === course.id)) {
       setStarredCourses(starredCourses.filter((c) => c.id !== course.id));
       setSelectedStarredCourses((prev) => prev.filter((code) => code !== course.courseCode));
     } else {
       setStarredCourses([...starredCourses, course]);
     }
-  };
+  }, [starredCourses, setStarredCourses, setSelectedStarredCourses]);
 
-  const changePriority = (course: CourseRow, priority: number) => {
+  const changePriority = useCallback((course: CourseRow, priority: number) => {
     setCoursePriorities((prev) => ({
       ...prev,
       [course.id]: priority,
     }));
-  };
+  }, [setCoursePriorities]);
 
   return (
     <div className="flex min-h-screen text-ink font-sans selection:bg-accent/30">
@@ -137,10 +141,13 @@ function CourseKoiApp() {
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 sm:mb-6 md:mb-8 gap-3 sm:gap-4 md:gap-6 shrink-0 z-20 relative">
           <div className="flex items-center justify-between w-full md:w-auto gap-2.5 sm:gap-4 animate-fade-in-down">
             <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+              {/* Open-only: the drawer covers this button while open, so closing
+                  is handled by the drawer's own ×, Escape, or the backdrop. */}
               <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                onClick={() => setSidebarCollapsed(false)}
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-control bg-accent-gradient flex items-center justify-center shadow-rest shrink-0 text-accent-ink hover:shadow-hover transition-shadow duration-150 ease-spring cursor-pointer"
-                title={sidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+                title="Open sidebar"
+                aria-label="Open sidebar"
               >
                 <FaBars size={16} />
               </button>

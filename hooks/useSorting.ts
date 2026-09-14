@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { CourseRow, SortKey, SortConfig } from '@/types/course';
 import { applyMultiSort } from '@/utils/sorting';
 
 export default function useSorting(filteredData: CourseRow[], starredFilteredData: CourseRow[]) {
   const [sorts, setSorts] = useState<SortConfig[]>([]);
 
-  const toggleSort = (key: SortKey) => {
+  // Stable identity (functional updater only) so memoized consumers of
+  // toggleSort aren't re-rendered on every parent render.
+  const toggleSort = useCallback((key: SortKey) => {
     setSorts((prevSorts) => {
       const existingIndex = prevSorts.findIndex((s) => s.key === key);
       if (existingIndex >= 0) {
@@ -26,7 +28,7 @@ export default function useSorting(filteredData: CourseRow[], starredFilteredDat
       }
       return [...prevSorts, { key, dir: 'asc' }];
     });
-  };
+  }, []);
 
   const sortedData = useMemo(() => applyMultiSort(filteredData, sorts), [filteredData, sorts]);
   const starredSortedData = useMemo(() => applyMultiSort(starredFilteredData, sorts), [starredFilteredData, sorts]);

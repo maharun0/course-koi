@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, memo } from 'react';
 import { CourseRow } from '@/types/course';
 import { parseCourseTime } from '@/utils/timeUtils';
 import { seatAvailabilityColor } from '@/utils/courseDisplay';
@@ -48,7 +48,7 @@ const TOTAL_MINS = END_OF_DAY - START_OF_DAY;
 // "Custom" blocks below.
 const CATEGORY_COLORS = ['bg-cat-1', 'bg-cat-2', 'bg-cat-3', 'bg-cat-4'];
 
-export default function ScheduleView({ courses, allCourses, savedCourses, starredCourses, toggleStar }: ScheduleViewProps) {
+function ScheduleView({ courses, allCourses, savedCourses, starredCourses, toggleStar }: ScheduleViewProps) {
     const [selectedCourses, setSelectedCourses] = useState<CourseRow[]>([]);
     const [sidebarTab, setSidebarTab] = useState<'courses' | 'custom'>('courses');
     const [searchTerm, setSearchTerm] = useState('');
@@ -1463,3 +1463,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses, starre
         </div>
     );
 }
+
+// Memoized so opening/closing the sidebar (or any unrelated parent state
+// change) does not re-render the whole schedule grid.
+export default memo(ScheduleView);

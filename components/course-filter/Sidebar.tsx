@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useDeferredValue, Dispatch, SetStateAction } from 'react';
+import { useState, useMemo, useEffect, useDeferredValue, Dispatch, SetStateAction } from 'react';
 import { FaStar, FaPlus, FaTimes, FaLayerGroup, FaSearch, FaTrash, FaCheck, FaBook } from 'react-icons/fa';
 import { CourseRow } from '@/types/course';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
@@ -52,27 +52,28 @@ function SortableCourseItem({ c, activeCourse, handleMyCourseClick, handleRemove
       style={style}
       {...attributes}
       {...listeners}
-      className={`relative group rounded-control transition-colors duration-150 ease-spring touch-none mb-0.5 ${activeCourse === c.courseCode
+      className={`relative group rounded-control transition-colors duration-150 ease-spring touch-none ${activeCourse === c.courseCode
         ? 'bg-accent text-accent-ink shadow-rest'
         : 'hover:bg-rule-soft text-ink-2 hover:text-ink'
         }`}
     >
       <button
         onClick={() => handleMyCourseClick(c.courseCode)}
-        className="w-full text-left px-2 py-1.5 flex items-center gap-2 cursor-pointer"
+        className="w-full text-left pl-2.5 pr-9 py-2 flex items-center gap-2 cursor-pointer"
         title={c.courseCode}
       >
         <div className={`w-1.5 h-1.5 rounded-pill shrink-0 ${activeCourse === c.courseCode ? 'bg-accent-ink' : 'bg-ok'}`} />
-        <span className="font-medium text-mini truncate flex-1">{c.courseCode}</span>
+        <span className="font-medium text-body truncate flex-1">{c.courseCode}</span>
       </button>
       <button
         onClick={(e) => {
           e.stopPropagation();
           handleRemoveCourse(c.courseCode);
         }}
-        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-ink-3 hover:text-bad opacity-0 group-hover:opacity-100 transition-opacity duration-150 ease-spring cursor-pointer"
+        className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-pill text-ink-3 hover:text-bad opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity duration-150 ease-spring cursor-pointer"
+        title={`Remove ${c.courseCode}`}
       >
-        <FaTimes size={10} />
+        <FaTimes size={11} />
       </button>
     </div>
   );
@@ -114,9 +115,22 @@ export default function Sidebar({
 
   const [searchTerm, setSearchTerm] = useState('');
   const deferredInput = useDeferredValue(searchTerm);
+  const isSearching = deferredInput.trim().length > 0;
 
-  // Filter available courses based on deferred local search
-  const availableCourses = useMemo(() => {
+  // Escape closes the drawer — the panel covers the header's hamburger while
+  // open, so it needs its own ways out (this, the × below, and the backdrop).
+  useEffect(() => {
+    if (isCollapsed) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsCollapsed(true);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isCollapsed, setIsCollapsed]);
+
+  // Search results, only computed while actually searching
+  const searchResults = useMemo(() => {
+    if (!isSearching) return [];
     const lowerInput = deferredInput.toLowerCase();
     return courseOptions
       .filter((c) => c.toLowerCase().includes(lowerInput))
@@ -125,7 +139,7 @@ export default function Sidebar({
         code,
         isSaved: savedCourses.some((s) => s.courseCode === code),
       }));
-  }, [deferredInput, courseOptions, savedCourses]);
+  }, [isSearching, deferredInput, courseOptions, savedCourses]);
 
   const handleMyCourseClick = (courseCode: string) => {
     setView('all');
@@ -133,11 +147,9 @@ export default function Sidebar({
     onTabChange?.('list');
   };
 
-  const handleAvailableCourseClick = (courseCode: string, isSaved: boolean) => {
+  const handleSearchResultClick = (courseCode: string, isSaved: boolean) => {
     if (!isSaved) {
       addCourse(courseCode);
-      // Optional: Clear search term?
-      // setSearchTerm('');
     } else {
       setView('all');
       setActiveCourse(courseCode);
@@ -152,6 +164,12 @@ export default function Sidebar({
       setView('all');
     }
   };
+
+  const navItemClass = (isActive: boolean) =>
+    `w-full text-left px-2.5 py-2 rounded-control flex items-center gap-2.5 text-body font-medium transition-colors duration-150 ease-spring cursor-pointer ${isActive
+      ? 'bg-accent/15 text-accent'
+      : 'text-ink-2 hover:bg-rule-soft hover:text-ink'
+    }`;
 
   return (
     <>
@@ -169,150 +187,150 @@ export default function Sidebar({
           }`}
       >
         {/* Panel */}
-        <div className="glass rounded-panel p-3 flex-1 flex flex-col overflow-hidden relative gap-2 w-full">
-          {/* Header */}
-          <div className="flex items-center gap-2 pb-2 border-b border-rule">
-            <div className="w-8 h-8 rounded-control bg-accent-gradient flex items-center justify-center shadow-rest shrink-0">
-              <FaLayerGroup className="text-accent-ink text-sm" />
-            </div>
-            <h2 className="text-body font-bold text-ink tracking-wide">Courses</h2>
+        <div className="glass rounded-panel p-3 flex-1 flex flex-col overflow-hidden relative gap-3 w-full">
+          {/* Title + close. The drawer covers the header hamburger while open,
+              so closing happens from in here. */}
+          <div className="flex items-center justify-between gap-2 shrink-0">
+            <h2 className="text-lead font-bold text-ink tracking-tight">Courses</h2>
+            <button
+              onClick={() => setIsCollapsed(true)}
+              className="w-9 h-9 shrink-0 flex items-center justify-center rounded-pill text-ink-3 hover:text-ink hover:bg-rule-soft transition-colors duration-150 ease-spring cursor-pointer"
+              title="Close sidebar"
+              aria-label="Close sidebar"
+            >
+              <FaTimes size={14} />
+            </button>
           </div>
 
-          {/* All Courses Button (Primary Action) */}
-          <div>
+          {/* Search — one input at the top, where a search field is expected */}
+          <div className="relative group shrink-0">
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-3 group-focus-within:text-accent transition-colors duration-150 ease-spring text-xs" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search or add a course..."
+              className="w-full bg-raised border border-rule rounded-control py-2 pl-9 pr-8 text-body text-ink focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-150 ease-spring placeholder-ink-3"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center rounded-pill text-ink-3 hover:text-ink cursor-pointer"
+                title="Clear search"
+              >
+                <FaTimes size={11} />
+              </button>
+            )}
+          </div>
+
+          {/* One list, two states: saved courses when idle, results while searching */}
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+            <div className="px-0.5 pb-1.5 shrink-0">
+              <h3 className="text-mini font-bold text-ink-3">
+                {isSearching ? 'Search results' : 'My courses'}
+              </h3>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar -mx-0.5 px-0.5 space-y-0.5">
+              {isSearching ? (
+                <>
+                  {searchResults.map((item) => (
+                    <button
+                      key={item.code}
+                      onClick={() => handleSearchResultClick(item.code, item.isSaved)}
+                      className={`w-full text-left px-2.5 py-2 rounded-control flex items-center gap-2.5 transition-colors duration-150 ease-spring cursor-pointer ${item.isSaved
+                        ? 'text-ink-3 hover:bg-rule-soft'
+                        : 'text-ink-2 hover:bg-rule-soft hover:text-ink'
+                        }`}
+                      title={item.isSaved ? `${item.code} — already added` : `Add ${item.code}`}
+                    >
+                      {item.isSaved ? (
+                        <FaCheck className="text-ok shrink-0" size={11} />
+                      ) : (
+                        <FaPlus className="text-accent shrink-0" size={11} />
+                      )}
+                      <span className="font-medium text-body truncate">{item.code}</span>
+                    </button>
+                  ))}
+                  {searchResults.length === 0 && (
+                    <div className="text-center py-6 text-ink-3 text-mini">
+                      No matches found.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {savedCourses.length === 0 && (
+                    <div className="text-center py-6 px-2 text-ink-3 text-mini leading-relaxed">
+                      Search above to add your courses.
+                    </div>
+                  )}
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={savedCourses.map(c => c.courseCode)} strategy={verticalListSortingStrategy}>
+                      {savedCourses.map((c) => (
+                        <SortableCourseItem
+                          key={c.courseCode}
+                          c={c}
+                          activeCourse={activeCourse}
+                          handleMyCourseClick={handleMyCourseClick}
+                          handleRemoveCourse={handleRemoveCourse}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Footer: the view switchers + utility, grouped together */}
+          <div className="pt-2 border-t border-rule space-y-0.5 shrink-0">
             <button
               onClick={() => {
                 setView('all');
                 setActiveCourse(null);
                 onTabChange?.('list');
               }}
-              className={`w-full text-left p-1.5 flex items-center gap-2 cursor-pointer rounded-control transition-colors duration-150 ease-spring group border ${activeCourse === null && view === 'all'
-                ? 'bg-accent-gradient border-transparent text-accent-ink shadow-rest'
-                : 'bg-rule-soft border-rule hover:bg-rule'
-                }`}
+              className={navItemClass(activeCourse === null && view === 'all')}
               title="All Courses"
             >
-              <div className={`w-6 h-6 rounded-chip flex items-center justify-center shrink-0 transition-transform duration-150 ease-spring group-hover:scale-110 ${activeCourse === null && view === 'all' ? 'bg-accent-ink/20' : 'bg-accent/15 text-accent'}`}>
-                <FaLayerGroup size={12} />
-              </div>
-              <span className="font-bold text-mini">All Courses</span>
+              <FaLayerGroup size={12} className={activeCourse === null && view === 'all' ? 'text-accent' : 'text-ink-3'} />
+              <span>All courses</span>
             </button>
-          </div>
 
-          {/* Section 1: My Courses (Top) */}
-          <div className="flex-1 flex flex-col overflow-hidden min-h-0 bg-rule-soft rounded-control border border-rule">
-            <div className="px-2 py-1.5 border-b border-rule">
-              <h3 className="text-mini font-bold text-ink-3">My Courses</h3>
-            </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-1 space-y-0.5">
-              {savedCourses.length === 0 && (
-                <div className="text-center p-2 text-ink-3 text-micro italic">
-                  Add courses to see them here.
-                </div>
-              )}
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={savedCourses.map(c => c.courseCode)} strategy={verticalListSortingStrategy}>
-                  {savedCourses.map((c) => (
-                    <SortableCourseItem
-                      key={c.courseCode}
-                      c={c}
-                      activeCourse={activeCourse}
-                      handleMyCourseClick={handleMyCourseClick}
-                      handleRemoveCourse={handleRemoveCourse}
-                    />
-                  ))}
-                </SortableContext>
-              </DndContext>
-            </div>
-          </div>
-
-          {/* Section 2: Search Bar (Middle) */}
-          <div className="relative group">
-            <FaSearch className="absolute left-2.5 top-2.5 text-ink-3 group-focus-within:text-accent transition-colors duration-150 ease-spring text-xs" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Add course..."
-              className="w-full bg-raised border border-rule rounded-control py-1.5 pl-8 pr-2 text-mini text-ink focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all duration-150 ease-spring placeholder-ink-3"
-            />
-            {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="absolute right-2 top-2 text-ink-3 hover:text-ink cursor-pointer">
-                <FaTimes size={10} />
-              </button>
-            )}
-          </div>
-
-          {/* Section 3: Available Courses (Bottom) */}
-          <div className="flex-1 flex flex-col overflow-hidden min-h-0 bg-rule-soft rounded-control border border-rule">
-            <div className="h-1.5" /> {/* Spacer instead of text */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-1 space-y-0.5">
-              {availableCourses.map((item) => (
-                <button
-                  key={item.code}
-                  onClick={() => handleAvailableCourseClick(item.code, item.isSaved)}
-                  className={`w-full text-left px-2 py-1.5 rounded-control flex items-center gap-2 transition-colors duration-150 ease-spring cursor-pointer ${item.isSaved
-                    ? 'opacity-50 cursor-default'
-                    : 'hover:bg-rule text-ink-2 hover:text-ink'
-                    }`}
-                  title={item.code}
-                >
-                  {item.isSaved ? (
-                    <FaCheck className="text-ok text-[10px] shrink-0" />
-                  ) : (
-                    <FaPlus className="text-[10px] text-accent shrink-0" />
-                  )}
-                  <span className={`font-medium text-mini truncate ${item.isSaved ? 'text-ink-3' : ''}`}>
-                    {item.code}
-                  </span>
-                </button>
-              ))}
-              {availableCourses.length === 0 && (
-                <div className="text-center p-2 text-ink-3 text-micro">
-                  No matches found.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="pt-2 border-t border-rule space-y-0.5 shrink-0">
             <button
               onClick={() => {
                 setView('starred');
                 setActiveCourse(null);
                 setSelectedStarredCourses([]);
               }}
-              className={`w-full text-left p-1.5 rounded-control flex items-center gap-2 text-mini font-medium transition-colors duration-150 ease-spring cursor-pointer ${view === 'starred'
-                ? 'bg-accent/15 text-accent border border-accent/30'
-                : 'text-ink-2 hover:text-accent hover:bg-accent/10'
-                }`}
+              className={navItemClass(view === 'starred')}
               title="Starred Sections"
             >
-              <FaStar className={view === 'starred' ? 'text-accent' : 'text-ink-3'} size={12} />
-              <span>Starred Sections</span>
+              <FaStar size={12} className={view === 'starred' ? 'text-gold' : 'text-ink-3'} />
+              <span>Starred sections</span>
             </button>
 
             <button
               onClick={() => setCoursePriorities({})}
-              className="w-full text-left p-1.5 rounded-control flex items-center gap-2 text-mini font-medium text-ink-3 hover:text-bad hover:bg-bad/10 transition-colors duration-150 ease-spring cursor-pointer"
+              className="w-full text-left px-2.5 py-2 rounded-control flex items-center gap-2.5 text-body font-medium text-ink-3 hover:text-bad hover:bg-bad/10 transition-colors duration-150 ease-spring cursor-pointer"
               title="Reset Priorities"
             >
-              <FaTrash className="text-[10px]" />
-              <span>Reset Priorities</span>
+              <FaTrash size={11} />
+              <span>Reset priorities</span>
             </button>
           </div>
         </div>
       </aside>
 
       {showDialog === 'added' && (
-        <div className="fixed bottom-8 left-8 bg-ok text-accent-ink px-4 py-2 rounded-control shadow-float animate-fade-in-up z-50 flex items-center gap-2">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-ok text-accent-ink px-4 py-2 rounded-control shadow-float animate-fade-in-up z-50 flex items-center gap-2">
           <FaBook />
           <span>Course Added</span>
         </div>
       )}
       {showDialog === 'error' && (
-        <div className="fixed bottom-8 left-8 bg-bad text-accent-ink px-4 py-2 rounded-control shadow-float animate-fade-in-up z-50">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-bad text-accent-ink px-4 py-2 rounded-control shadow-float animate-fade-in-up z-50">
           Course not found.
         </div>
       )}
