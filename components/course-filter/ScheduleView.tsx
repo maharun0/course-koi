@@ -1233,6 +1233,19 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                 <div className="flex justify-between items-center mb-4 shrink-0">
                     <h2 className="text-head font-bold text-ink">Weekly Schedule</h2>
                     <div className="flex gap-2">
+                        <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Import Schedule">
+                            <FaFileImport /> <span className="hidden sm:inline">Import</span>
+                        </button>
+                        <div className="h-4 w-[1px] bg-rule my-auto mx-1"></div>
+                        <button onClick={copyRoutineText} className="flex items-center gap-2 px-3 py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Copy Text Only">
+                            <FaCopy /> <span className="hidden sm:inline">Text</span>
+                        </button>
+                        <button onClick={copyImageToClipboard} className="flex items-center gap-2 px-3 py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Copy Image">
+                            <FaClipboard /> <span className="hidden sm:inline">Image</span>
+                        </button>
+                        <button onClick={downloadImage} className="flex items-center gap-2 px-3 py-1.5 bg-accent-gradient hover:shadow-hover rounded-pill text-body text-accent-ink shadow-rest transition-shadow duration-150 ease-spring" title="Download PNG">
+                            <FaDownload /> <span className="hidden sm:inline">PNG</span>
+                        </button>
                         <div className="relative z-50">
                             <button
                                 onClick={() => setExportExpanded(!exportExpanded)}
@@ -1242,7 +1255,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                 <FaFileExport /> <span className="hidden sm:inline">Export</span>
                             </button>
                             {exportExpanded && (
-                                <div className="absolute top-full left-0 mt-2 w-48 bg-surface border border-rule rounded-panel shadow-float p-1.5 flex flex-col gap-1 animate-fade-in origin-top-left overflow-hidden">
+                                <div className="absolute top-full right-0 mt-2 w-48 bg-surface border border-rule rounded-panel shadow-float p-1.5 flex flex-col gap-1 animate-fade-in origin-top-right overflow-hidden">
                                     <button
                                         onClick={copyExportData}
                                         className="w-full text-left px-3 py-2 hover:bg-rule-soft rounded-control text-body text-ink-2 hover:text-ink transition-colors duration-150 ease-spring flex items-center gap-3"
@@ -1258,31 +1271,17 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                 </div>
                             )}
                         </div>
-                        <div className="h-4 w-[1px] bg-rule my-auto mx-1"></div>
-                        <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Import Schedule">
-                            <FaFileImport /> <span className="hidden sm:inline">Import</span>
-                        </button>
-                        <div className="h-4 w-[1px] bg-rule my-auto mx-1"></div>
-                        <button onClick={copyRoutineText} className="flex items-center gap-2 px-3 py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Copy Text Only">
-                            <FaCopy /> <span className="hidden sm:inline">Text</span>
-                        </button>
-                        <button onClick={copyImageToClipboard} className="flex items-center gap-2 px-3 py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Copy Image">
-                            <FaClipboard /> <span className="hidden sm:inline">Image</span>
-                        </button>
-                        <button onClick={downloadImage} className="flex items-center gap-2 px-3 py-1.5 bg-accent-gradient hover:shadow-hover rounded-pill text-body text-accent-ink shadow-rest transition-shadow duration-150 ease-spring" title="Download PNG">
-                            <FaDownload /> <span className="hidden sm:inline">PNG</span>
-                        </button>
                     </div>
                 </div>
 
                 {/* The Grid Container - Capture Target */}
-                <div ref={scheduleRef} className="p-2 bg-canvas rounded-panel border border-rule w-full h-full flex flex-col">
-                    <div className="flex-1 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] bg-rule-soft rounded-control overflow-hidden border border-rule h-full relative">
+                <div ref={scheduleRef} className="p-2 bg-surface w-full h-full flex flex-col">
+                    <div className="flex-1 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] h-full relative">
 
                         {/* 1. Time Column */}
-                        <div className="relative h-full border-r border-rule bg-raised">
+                        <div className="relative h-full border-r border-rule">
                             {/* Header */}
-                            <div className="h-8 border-b border-rule flex items-center justify-center text-micro font-bold text-ink-3 uppercase tracking-wider bg-raised absolute w-full top-0 z-10">Time</div>
+                            <div className="h-8 border-b border-rule flex items-center justify-center text-micro font-bold text-ink-3 uppercase tracking-wider absolute w-full top-0 z-10">Time</div>
 
                             {/* Time Labels */}
                             <div className="absolute top-8 bottom-0 w-full">
@@ -1305,7 +1304,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                         {DAYS.map(day => (
                             <div key={day} className="relative h-full border-r border-rule last:border-r-0">
                                 {/* Header */}
-                                <div className="h-8 border-b border-rule flex items-center justify-center text-body font-bold text-ink bg-raised absolute w-full top-0 z-10">
+                                <div className="h-8 border-b border-rule flex items-center justify-center text-body font-bold text-ink absolute w-full top-0 z-10">
                                     {day}
                                 </div>
 

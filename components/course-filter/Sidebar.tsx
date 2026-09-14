@@ -94,6 +94,7 @@ export default function Sidebar({
   setCoursePriorities,
   onTabChange,
   isCollapsed,
+  setIsCollapsed,
 }: SidebarProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -154,8 +155,17 @@ export default function Sidebar({
 
   return (
     <>
+      {/* Backdrop — click to close. Fixed + opacity-only, so it never touches page layout. */}
+      <div
+        onClick={() => setIsCollapsed(true)}
+        className={`fixed inset-0 z-30 bg-scrim/40 transition-opacity duration-150 ease-spring ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+      />
+
+      {/* Overlay drawer — fixed position, transform/opacity only, so opening/closing
+          never resizes or reflows the main content behind it. */}
       <aside
-        className={`shrink-0 flex flex-col transition-all duration-300 ease-spring relative z-20 overflow-hidden ${isCollapsed ? 'w-0 m-0' : 'w-64 m-2 h-[calc(100vh-1rem)]'
+        className={`fixed left-2 top-2 bottom-2 z-40 w-64 flex flex-col transition-[transform,opacity] duration-200 ease-spring will-change-transform ${isCollapsed ? '-translate-x-[calc(100%+1rem)] opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'
           }`}
       >
         {/* Panel */}

@@ -197,10 +197,11 @@ function CourseKoiApp() {
         <div className="relative flex-1 w-full isolate">
           {/* List View */}
           <div
-            className={`absolute inset-0 w-full h-full overflow-y-auto custom-scrollbar transition-all duration-300 ease-in-out ${activeTab === 'list'
-              ? 'opacity-100 translate-x-0 z-10'
-              : 'opacity-0 -translate-x-4 z-0 pointer-events-none'
+            className={`absolute inset-0 w-full h-full overflow-y-auto custom-scrollbar transition-opacity duration-150 ease-spring ${activeTab === 'list'
+              ? 'opacity-100 z-10'
+              : 'opacity-0 z-0 pointer-events-none'
               }`}
+            style={{ contentVisibility: activeTab === 'list' ? 'visible' : 'hidden' }}
           >
             <div className="pb-4"> {/* Padding bottom for scroll content */}
               <FilterMenu
@@ -232,10 +233,11 @@ function CourseKoiApp() {
 
           {/* Schedule View */}
           <div
-            className={`absolute inset-0 w-full h-full overflow-hidden transition-all duration-300 ease-in-out ${activeTab === 'schedule'
-              ? 'opacity-100 translate-x-0 z-10'
-              : 'opacity-0 translate-x-4 z-0 pointer-events-none'
+            className={`absolute inset-0 w-full h-full overflow-hidden transition-opacity duration-150 ease-spring ${activeTab === 'schedule'
+              ? 'opacity-100 z-10'
+              : 'opacity-0 z-0 pointer-events-none'
               }`}
+            style={{ contentVisibility: activeTab === 'schedule' ? 'visible' : 'hidden' }}
           >
             <div className="w-full h-full">
               <p className="text-ink-2 mb-4 px-2 hidden">Select from your <strong>Starred</strong> courses to build your weekly schedule.</p>
