@@ -75,13 +75,14 @@
   /* Derived (generate bg-accent-gradient / shadow-glow utilities) */
   --background-image-accent-gradient: linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
   --shadow-glow: 0 0 0 4px color-mix(in oklab, var(--color-accent) 16%, transparent);
-}
 
-/* cat-5 / cat-6 alias the neutral inks — defined outside @theme since they
-   reference other tokens rather than a literal value. */
-:root {
+  /* cat-5 / cat-6 alias the neutral inks — must live in @theme (not plain
+     :root) or Tailwind never generates bg-cat-5/bg-cat-6 utilities for them. */
   --color-cat-5: var(--color-ink);
   --color-cat-6: var(--color-slate);
+}
+
+:root {
   color-scheme: light dark;
 }
 
