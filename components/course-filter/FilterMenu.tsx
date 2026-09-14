@@ -90,7 +90,7 @@ export default function FilterMenu({
 
   return (
     <div className="space-y-4 mb-6">
-      <div className="flex flex-col md:flex-row md:items-center gap-4">
+      <div className="flex flex-row items-center gap-2 md:gap-4">
         {/* Search Bar */}
         <div className="relative flex-1 group">
           <input
@@ -114,7 +114,7 @@ export default function FilterMenu({
         </div>
 
         {/* Filter Toggle */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             ref={filterButtonRef}
             onClick={() => setShowFilterMenu(!showFilterMenu)}
@@ -124,7 +124,7 @@ export default function FilterMenu({
               }`}
           >
             <FaFilter className={showFilterMenu ? 'text-accent-ink' : 'text-ink-3'} />
-            Columns
+            Filter
           </button>
 
           {showFilterMenu && (

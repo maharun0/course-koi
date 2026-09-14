@@ -176,6 +176,26 @@
     font-feature-settings: "tnum" 1;
   }
 
+  /* Shared responsive side-padding scale for main content regions — named
+     once so "more/less space" requests have a single place to tune instead
+     of a duplicated px-* string per container. */
+  .content-padding {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  @media (min-width: 640px) {
+    .content-padding { padding-left: 1rem; padding-right: 1rem; }
+  }
+  @media (min-width: 768px) {
+    .content-padding { padding-left: 4rem; padding-right: 4rem; }
+  }
+  @media (min-width: 1024px) {
+    .content-padding { padding-left: 6rem; padding-right: 6rem; }
+  }
+  @media (min-width: 1280px) {
+    .content-padding { padding-left: 8rem; padding-right: 8rem; }
+  }
+
   .scroll-area::-webkit-scrollbar {
     width: 10px;
     height: 10px;

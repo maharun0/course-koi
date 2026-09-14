@@ -165,11 +165,11 @@ export default function Sidebar({
       {/* Overlay drawer — fixed position, transform/opacity only, so opening/closing
           never resizes or reflows the main content behind it. */}
       <aside
-        className={`fixed left-2 top-2 bottom-2 z-40 w-64 flex flex-col transition-[transform,opacity] duration-200 ease-spring will-change-transform ${isCollapsed ? '-translate-x-[calc(100%+1rem)] opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'
+        className={`fixed left-2 top-2 bottom-2 z-40 w-[85vw] max-w-64 sm:w-64 flex flex-col transition-[transform,opacity] duration-200 ease-spring will-change-transform ${isCollapsed ? '-translate-x-[calc(100%+1rem)] opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'
           }`}
       >
         {/* Panel */}
-        <div className="glass rounded-panel p-3 flex-1 flex flex-col overflow-hidden relative gap-2 w-64">
+        <div className="glass rounded-panel p-3 flex-1 flex flex-col overflow-hidden relative gap-2 w-full">
           {/* Header */}
           <div className="flex items-center gap-2 pb-2 border-b border-rule">
             <div className="w-8 h-8 rounded-control bg-accent-gradient flex items-center justify-center shadow-rest shrink-0">

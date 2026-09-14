@@ -1,7 +1,8 @@
 'use client';
 
-import { FaStar, FaSortUp, FaSortDown, FaSort } from 'react-icons/fa';
+import { FaStar, FaSortUp, FaSortDown, FaSort, FaClock, FaMapMarkerAlt, FaChalkboardTeacher, FaChair } from 'react-icons/fa';
 import { CourseRow, SortKey, SortConfig } from '@/types/course';
+import { seatAvailabilityColor } from '@/utils/courseDisplay';
 
 interface CourseTableProps {
   sortedData: CourseRow[];
@@ -73,11 +74,6 @@ export default function CourseTable({
 
   return (
     <div className="w-full space-y-4">
-      {/* Helper Note (Mobile Only) */}
-      <div className="md:hidden text-center text-mini text-ink-3 mb-2">
-        Tip: Scroll horizontally for more columns
-      </div>
-
       {/* Borderless table: interior rules only, no outer box/shadow-2xl card.
           No nested horizontal-scroll wrapper here — that would itself become
           a scroll container (overflow-x non-visible forces overflow-y:auto
@@ -174,54 +170,80 @@ export default function CourseTable({
           </table>
       </div>
 
-      {/* Mobile Card View */}
-      <div className="md:hidden space-y-4">
+      {/* Mobile Card View — ranked hierarchy instead of one flat size:
+          course (biggest, boldest) > time (the one fact that answers "do I
+          need to be somewhere") > room/faculty (supporting) > seats/priority
+          (smallest, least urgent). Still far more compact than the original
+          2x2-boxed-grid card, but text sizes are chosen for legibility, not
+          just density. */}
+      <div className="md:hidden space-y-2">
         {sortedData.map((r) => {
           const isStarred = starredCourses.some((c) => c.id === r.id);
           return (
-            <div key={r.id} className="glass rounded-panel p-4 space-y-3 relative overflow-hidden">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lead font-bold text-ink">{r.courseCode}</h3>
-                  <p className="text-body text-ink-2">Section {r.section}</p>
+            <div key={r.id} className="glass rounded-panel p-2.5 space-y-1 relative overflow-hidden">
+              {/* Tier 1: course code + section badge + star — the primary identifier */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-bold text-lead text-ink tracking-tight truncate">{r.courseCode}</span>
+                  <span className="shrink-0 px-2 h-6 flex items-center justify-center rounded-pill bg-accent/15 text-accent text-mini font-semibold tabular font-mono">
+                    Sec {r.section}
+                  </span>
                 </div>
                 <button
                   onClick={() => toggleStar(r)}
-                  className={`p-2 rounded-pill ${isStarred ? 'text-accent bg-accent/10' : 'text-ink-3 bg-rule-soft'}`}
+                  className={`w-10 h-10 shrink-0 flex items-center justify-center rounded-pill ${isStarred ? 'text-accent bg-accent/10' : 'text-ink-3 bg-rule-soft'}`}
                 >
-                  <FaStar />
+                  <FaStar size={15} />
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-body">
-                <div className="bg-rule-soft rounded-control px-3 py-2">
-                  <span className="block text-mini text-ink-3">Time</span>
-                  <span className="text-ink-2">{r.time}</span>
-                </div>
-                <div className="bg-rule-soft rounded-control px-3 py-2">
-                  <span className="block text-mini text-ink-3">Room</span>
-                  <span className="text-ink-2">{r.room}</span>
-                </div>
-                <div className="bg-rule-soft rounded-control px-3 py-2">
-                  <span className="block text-mini text-ink-3">Faculty</span>
-                  <span className="text-ink-2">{r.facultyCode}</span>
-                </div>
-                <div className="bg-rule-soft rounded-control px-3 py-2">
-                  <span className="block text-mini text-ink-3">Seats</span>
-                  <span className="text-ink-2 tabular font-mono">{r.seat}</span>
-                </div>
+              {/* Tier 2: faculty + time, grouped adjacent — the most action-relevant facts */}
+              <div className="flex items-center gap-3 text-body font-medium text-ink">
+                <span className="flex items-center gap-1.5 shrink-0">
+                  <FaChalkboardTeacher className="shrink-0 text-accent" size={14} />
+                  {r.facultyCode}
+                </span>
+                <span className="flex items-center gap-1.5 min-w-0 truncate">
+                  <FaClock className="shrink-0 opacity-60" size={14} />
+                  <span className="truncate">{r.time}</span>
+                </span>
               </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t border-rule mt-2">
-                <span className="text-mini text-ink-3">Priority:</span>
-                <input
-                  type="number"
-                  min="-10"
-                  max="10"
-                  value={r.priority ?? 0}
-                  onChange={(e) => changePriority(r, parseInt(e.target.value, 10) || 0)}
-                  className="w-16 bg-raised border border-rule rounded-control px-2 py-1 text-center text-ink focus:outline-none focus:border-accent font-mono tabular text-body"
-                />
+              {/* Tier 3: room + seats (left), priority (right) — supporting detail,
+                  sharing one row since the grouped layout above leaves room */}
+              <div className="flex items-center justify-between gap-2 text-mini text-ink-2">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1.5">
+                    <FaMapMarkerAlt className="shrink-0 opacity-60" size={12} />
+                    {r.room}
+                  </span>
+                  <span className={`flex items-center gap-1.5 font-medium tabular font-mono text-body ${seatAvailabilityColor(r.seat)}`}>
+                    <FaChair className="opacity-70" size={14} />
+                    {r.seat}
+                  </span>
+                </div>
+                <div className="flex items-center bg-raised rounded-control border border-rule overflow-hidden shrink-0">
+                  <button
+                    onClick={() => changePriority(r, (r.priority ?? 0) - 1)}
+                    className="w-7 h-7 flex items-center justify-center hover:bg-rule-soft text-ink-3 hover:text-ink transition-colors duration-150 ease-spring border-r border-rule"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="-10"
+                    max="10"
+                    value={r.priority ?? 0}
+                    onChange={(e) => changePriority(r, parseInt(e.target.value, 10) || 0)}
+                    className="w-8 bg-transparent text-center text-ink focus:outline-none font-mono tabular text-mini"
+                  />
+                  <button
+                    onClick={() => changePriority(r, (r.priority ?? 0) + 1)}
+                    className="w-7 h-7 flex items-center justify-center hover:bg-rule-soft text-ink-3 hover:text-ink transition-colors duration-150 ease-spring border-l border-rule"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
             </div>
           )

@@ -134,29 +134,42 @@ function CourseKoiApp() {
       <main className="flex-1 p-2 h-screen flex flex-col overflow-hidden relative">
 
         {/* Header Region */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6 shrink-0 z-20 relative">
-          <div className="flex items-center gap-4 animate-fade-in-down">
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="w-10 h-10 rounded-control bg-accent-gradient flex items-center justify-center shadow-rest shrink-0 text-accent-ink hover:shadow-hover transition-shadow duration-150 ease-spring cursor-pointer"
-              title={sidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 sm:mb-6 md:mb-8 gap-3 sm:gap-4 md:gap-6 shrink-0 z-20 relative">
+          <div className="flex items-center justify-between w-full md:w-auto gap-2.5 sm:gap-4 animate-fade-in-down">
+            <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-control bg-accent-gradient flex items-center justify-center shadow-rest shrink-0 text-accent-ink hover:shadow-hover transition-shadow duration-150 ease-spring cursor-pointer"
+                title={sidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+              >
+                <FaBars size={16} />
+              </button>
+              <div className="relative group cursor-pointer shrink-0">
+                <Image src="/course_koi.png" alt="Course Koi" width={64} height={64} className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-pill relative z-10 border-2 border-rule" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="font-display text-xl sm:text-2xl md:text-4xl tracking-tight text-ink mb-0.5 md:mb-1 whitespace-nowrap">
+                  Course <span className="text-gradient">Koi?</span>
+                </h1>
+                <p className="text-ink-2 text-[10px] sm:text-mini font-medium truncate">Last Updated: {lastUpdated ?? '...'}</p>
+              </div>
+            </div>
+
+            {/* GitHub — mobile only here (top row, right corner); desktop version lives in the second row below */}
+            <a
+              href="https://github.com/maharun0/course-koi"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="md:hidden shrink-0 flex items-center justify-center w-9 h-9 bg-surface hover:bg-rule-soft text-ink rounded-control transition-colors duration-150 ease-spring border border-rule"
+              title="Star on GitHub"
             >
-              <FaBars size={16} />
-            </button>
-            <div className="relative group cursor-pointer">
-              <Image src="/course_koi.png" alt="Course Koi" width={64} height={64} className="rounded-pill relative z-10 border-2 border-rule" />
-            </div>
-            <div>
-              <h1 className="font-display text-4xl tracking-tight text-ink mb-1">
-                Course <span className="text-gradient">Koi?</span>
-              </h1>
-              <p className="text-ink-2 text-mini font-medium">Last Updated: {lastUpdated ?? '...'}</p>
-            </div>
+              <FaGithub className="text-lg" />
+            </a>
           </div>
 
           <div className="flex items-center gap-4">
             {/* View Toggles */}
-            <div className="glass p-1 rounded-control flex items-center relative w-[240px]">
+            <div className="glass p-1 rounded-control flex items-center relative flex-1 sm:flex-none sm:w-[240px]">
               {/* Sliding Background */}
               <div
                 className="absolute top-1 bottom-1 rounded-chip bg-accent shadow-rest transition-all duration-300 ease-spring z-0"
@@ -204,7 +217,7 @@ function CourseKoiApp() {
             style={{ contentVisibility: activeTab === 'list' ? 'visible' : 'hidden' }}
           >
             {/* Fixed section: search/filter bar + course chips never scroll away */}
-            <div className="shrink-0 px-8 md:px-24 lg:px-32 xl:px-40">
+            <div className="shrink-0 content-padding">
               <FilterMenu
                 view={view}
                 query={view === 'all' ? query : starredQuery}
@@ -223,7 +236,7 @@ function CourseKoiApp() {
               />
             </div>
             {/* Scrollable section: table header stays pinned, only rows scroll */}
-            <div className="flex-1 overflow-auto custom-scrollbar pb-4 px-8 md:px-24 lg:px-32 xl:px-40">
+            <div className="flex-1 overflow-auto custom-scrollbar pb-4 content-padding">
               <CourseTable
                 sortedData={view === 'all' ? sortedData : starredSortedData}
                 sorts={sorts}

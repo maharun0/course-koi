@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { CourseRow } from '@/types/course';
 import { parseCourseTime } from '@/utils/timeUtils';
+import { seatAvailabilityColor } from '@/utils/courseDisplay';
 import { FaCopy, FaDownload, FaCheck, FaTimes, FaClipboard, FaFileImport, FaFileExport, FaCloudUploadAlt, FaFileCode, FaStar, FaLayerGroup, FaBook, FaChalkboardTeacher, FaChair, FaMapMarkerAlt } from 'react-icons/fa';
 import { toPng, toBlob } from 'html-to-image';
 
@@ -34,6 +35,9 @@ const TIME_SLOTS = [
 ];
 
 const DAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+// JS Date#getDay() index (0=Sun...6=Sat) -> our DAYS labels, for defaulting
+// the mobile single-day view to today.
+const DAY_OF_WEEK_TO_LABEL = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const START_OF_DAY = 8 * 60; // 08:00 AM
 const END_OF_DAY = 19 * 60 + 30; // 07:30 PM (End of last slot)
@@ -51,6 +55,9 @@ export default function ScheduleView({ courses, allCourses, savedCourses, starre
     const [courseListMode, setCourseListMode] = useState<CourseListMode>('starred');
     const [hoveredCourse, setHoveredCourse] = useState<CourseRow | null>(null);
     const [selectedMyCourse, setSelectedMyCourse] = useState<string | null>(null);
+    // Mobile-only: which single day is shown in the schedule grid. Desktop
+    // (md and up) always shows all 7 days regardless of this value.
+    const [selectedDay, setSelectedDay] = useState<string>(() => DAY_OF_WEEK_TO_LABEL[new Date().getDay()]);
 
     // Custom Event State
     const [customTag, setCustomTag] = useState('');
@@ -104,14 +111,6 @@ export default function ScheduleView({ courses, allCourses, savedCourses, starre
 
     // --- HOVER GAP DETECTION ---
     const [hoverState, setHoverState] = useState<{ day: string; mins: number } | null>(null);
-
-    // Seat availability signal: genuinely useful for registration, not decorative
-    const seatAvailabilityColor = (seat: number | undefined): string => {
-        if (seat === undefined) return 'text-ink-3';
-        if (seat >= 20) return 'text-ok';
-        if (seat >= 5) return 'text-warn';
-        return 'text-bad';
-    };
 
     // Helpers
     const minutesToTimeStr = (totalMins: number): string => {
@@ -970,7 +969,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses, starre
 
 
             {/* Left: Sidebar (Swapped Position -> Right) */}
-            <div className="w-full lg:w-96 glass rounded-panel p-3 flex flex-col shrink-0 lg:h-full h-auto max-h-[500px] lg:max-h-full transition-all lg:order-2">
+            <div className="w-full lg:w-96 glass rounded-panel p-3 flex flex-col shrink-0 lg:h-full h-auto max-h-[500px] lg:max-h-full transition-all order-2">
                 {/* Tabs */}
                 <div className="flex gap-1 p-1 bg-raised rounded-control mb-3">
                     <button
@@ -1244,27 +1243,27 @@ export default function ScheduleView({ courses, allCourses, savedCourses, starre
             </div>
 
             {/* Right: Schedule Grid */}
-            <div className="flex-1 glass rounded-panel p-3 overflow-hidden flex flex-col lg:order-1">
-                <div className="flex justify-between items-center mb-4 shrink-0">
-                    <h2 className="text-head font-bold text-ink">Weekly Schedule</h2>
-                    <div className="flex gap-2">
-                        <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 px-3 py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Import Schedule">
+            <div className="flex-1 glass rounded-panel p-3 overflow-hidden flex flex-col order-1">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4 shrink-0">
+                    <h2 className="text-lead sm:text-head font-bold text-ink whitespace-nowrap">Weekly Schedule</h2>
+                    <div className="flex gap-2 overflow-x-auto pb-0.5 sm:pb-0">
+                        <button onClick={() => setShowImportModal(true)} className="shrink-0 flex items-center gap-2 px-3 py-2.5 sm:py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Import Schedule">
                             <FaFileImport /> <span className="hidden sm:inline">Import</span>
                         </button>
-                        <div className="h-4 w-[1px] bg-rule my-auto mx-1"></div>
-                        <button onClick={copyRoutineText} className="flex items-center gap-2 px-3 py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Copy Text Only">
+                        <div className="shrink-0 h-4 w-[1px] bg-rule my-auto mx-1"></div>
+                        <button onClick={copyRoutineText} className="shrink-0 flex items-center gap-2 px-3 py-2.5 sm:py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Copy Text Only">
                             <FaCopy /> <span className="hidden sm:inline">Text</span>
                         </button>
-                        <button onClick={copyImageToClipboard} className="flex items-center gap-2 px-3 py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Copy Image">
+                        <button onClick={copyImageToClipboard} className="shrink-0 flex items-center gap-2 px-3 py-2.5 sm:py-1.5 bg-rule-soft hover:bg-rule rounded-pill text-body transition-colors duration-150 ease-spring text-ink" title="Copy Image">
                             <FaClipboard /> <span className="hidden sm:inline">Image</span>
                         </button>
-                        <button onClick={downloadImage} className="flex items-center gap-2 px-3 py-1.5 bg-accent-gradient hover:shadow-hover rounded-pill text-body text-accent-ink shadow-rest transition-shadow duration-150 ease-spring" title="Download PNG">
+                        <button onClick={downloadImage} className="shrink-0 flex items-center gap-2 px-3 py-2.5 sm:py-1.5 bg-accent-gradient hover:shadow-hover rounded-pill text-body text-accent-ink shadow-rest transition-shadow duration-150 ease-spring" title="Download PNG">
                             <FaDownload /> <span className="hidden sm:inline">PNG</span>
                         </button>
-                        <div className="relative z-50">
+                        <div className="shrink-0 relative z-50">
                             <button
                                 onClick={() => setExportExpanded(!exportExpanded)}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-pill text-body transition-colors duration-150 ease-spring ${exportExpanded ? 'bg-accent text-accent-ink' : 'bg-rule-soft hover:bg-rule text-ink'}`}
+                                className={`flex items-center gap-2 px-3 py-2.5 sm:py-1.5 rounded-pill text-body transition-colors duration-150 ease-spring ${exportExpanded ? 'bg-accent text-accent-ink' : 'bg-rule-soft hover:bg-rule text-ink'}`}
                                 title="Export Schedule"
                             >
                                 <FaFileExport /> <span className="hidden sm:inline">Export</span>
@@ -1289,9 +1288,22 @@ export default function ScheduleView({ courses, allCourses, savedCourses, starre
                     </div>
                 </div>
 
+                {/* Mobile-only day switcher — desktop always shows all 7 days */}
+                <div className="md:hidden flex gap-1.5 mb-3 overflow-x-auto pb-1 shrink-0">
+                    {DAYS.map(day => (
+                        <button
+                            key={day}
+                            onClick={() => setSelectedDay(day)}
+                            className={`shrink-0 px-3 py-1.5 rounded-pill text-mini font-bold transition-colors duration-150 ease-spring ${selectedDay === day ? 'bg-accent-gradient text-accent-ink shadow-rest' : 'bg-rule-soft text-ink-3 hover:bg-rule hover:text-ink'}`}
+                        >
+                            {day}
+                        </button>
+                    ))}
+                </div>
+
                 {/* The Grid Container - Capture Target */}
                 <div ref={scheduleRef} className="p-2 bg-surface w-full h-full flex flex-col">
-                    <div className="flex-1 grid grid-cols-[80px_repeat(7,minmax(0,1fr))] h-full relative">
+                    <div className="flex-1 grid grid-cols-[60px_1fr] md:grid-cols-[80px_repeat(7,minmax(0,1fr))] h-full relative">
 
                         {/* 1. Time Column */}
                         <div className="relative h-full border-r border-rule">
@@ -1317,7 +1329,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses, starre
 
                         {/* 2. Day Columns */}
                         {DAYS.map(day => (
-                            <div key={day} className="relative h-full border-r border-rule last:border-r-0">
+                            <div key={day} className={`relative h-full border-r border-rule last:border-r-0 ${day === selectedDay ? 'block' : 'hidden md:block'}`}>
                                 {/* Header */}
                                 <div className="h-8 border-b border-rule flex items-center justify-center text-body font-bold text-ink absolute w-full top-0 z-10">
                                     {day}
