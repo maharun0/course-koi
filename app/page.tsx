@@ -287,7 +287,10 @@ function CourseKoiApp() {
                 <h1 className="font-display text-xl sm:text-2xl md:text-4xl tracking-tight text-ink mb-0.5 md:mb-1 whitespace-nowrap">
                   Course <span className="text-gradient">Koi?</span>
                 </h1>
-                <p className="text-ink-2 text-[10px] sm:text-mini font-medium truncate">Last Updated: {lastUpdated ?? '...'}</p>
+                <p className="flex items-center gap-1.5 text-ink-2 text-[10px] sm:text-mini font-medium truncate">
+                  <span className="w-1.5 h-1.5 rounded-pill bg-ok shrink-0" />
+                  Updated {shortUpdatedLabel(lastUpdated)}
+                </p>
               </div>
             </div>
 
