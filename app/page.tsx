@@ -11,8 +11,11 @@ import useCourseData from '@/hooks/useCourseData';
 import useFiltering from '@/hooks/useFiltering';
 import useSorting from '@/hooks/useSorting';
 import { CourseRow } from '@/types/course';
+import { shortUpdatedLabel } from '@/utils/courseDisplay';
+import Shuffle from '@/components/Shuffle';
 import Image from 'next/image';
-import { FaGithub, FaStar, FaList, FaCalendarAlt, FaBars } from 'react-icons/fa';
+import { FaGithub, FaList, FaCalendarAlt, FaBars } from 'react-icons/fa';
+import { TbLayoutSidebarLeftExpand, TbLayoutSidebarLeftCollapse } from 'react-icons/tb';
 
 function CourseKoiApp() {
   const router = useRouter();
@@ -105,7 +108,7 @@ function CourseKoiApp() {
   }, [setCoursePriorities]);
 
   return (
-    <div className="flex min-h-screen text-ink font-sans selection:bg-accent/30">
+    <div className="flex flex-col h-screen overflow-hidden text-ink font-sans selection:bg-accent/30">
 
       {/* Absolute Background Effects */}
       <div className="fixed inset-0 z-[-1] pointer-events-none">
@@ -135,10 +138,134 @@ function CourseKoiApp() {
         setIsCollapsed={setSidebarCollapsed}
       />
 
-      <main className="flex-1 p-2 h-screen flex flex-col overflow-hidden relative">
+      {/* ── Desktop / tablet navbar ─────────────────────────────────────────
+          Full-bleed bar so the header is anchored like the rest of the app's
+          surfaces. Mobile keeps its own two-row header inside <main> below. */}
+      <header className="hidden md:flex shrink-0 items-center gap-3 lg:gap-4 h-14 px-3 lg:px-4 bg-surface border-b border-rule relative z-30">
+        {/* Drawer trigger sits at the far-left edge, before the brand. Three
+            things carry the "this opens a panel" affordance that a bare
+            hamburger did not: a sidebar glyph that depicts the panel itself and
+            flips to its collapse counterpart while open, a button chassis so it
+            reads as a control rather than a page title, and a count of what is
+            inside so it reads as a container. */}
+        <button
+          onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+          className="flex items-center gap-2 h-9 pl-2.5 pr-2 rounded-control border border-rule bg-canvas text-body font-medium text-ink-2 hover:text-ink hover:border-accent hover:bg-rule-soft aria-expanded:text-accent aria-expanded:border-accent transition-colors duration-150 cursor-pointer shrink-0"
+          title={sidebarCollapsed ? 'Open courses panel' : 'Close courses panel'}
+          aria-label={sidebarCollapsed ? 'Open courses panel' : 'Close courses panel'}
+          aria-expanded={!sidebarCollapsed}
+          aria-controls="courses-panel"
+        >
+          {sidebarCollapsed ? (
+            <TbLayoutSidebarLeftExpand size={19} className="shrink-0" />
+          ) : (
+            <TbLayoutSidebarLeftCollapse size={19} className="shrink-0" />
+          )}
+          <span className="hidden lg:inline">Courses</span>
+          {savedCourses.length > 0 && (
+            <span className="min-w-5 h-5 px-1.5 grid place-items-center rounded-pill bg-accent text-accent-ink text-micro font-semibold tabular-nums">
+              {savedCourses.length}
+            </span>
+          )}
+        </button>
 
-        {/* Header Region */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 sm:mb-6 md:mb-8 gap-3 sm:gap-4 md:gap-6 shrink-0 z-20 relative">
+        {/* Brand lock-up — avatar + wordmark sized to read as one mark */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Image
+            src="/course_koi.png"
+            alt="Course Koi"
+            width={64}
+            height={64}
+            className="w-9 h-9 rounded-pill border border-rule shrink-0"
+          />
+          {/* Solid accent rather than the gradient used on mobile: at this size
+              the gradient's light end measures 2.7:1 on the surface (fails AA);
+              solid accent is 4.9:1. Two Shuffle instances rather than one so the
+              two-tone wordmark survives the per-character split. */}
+          <span className="font-display text-figure tracking-tight whitespace-nowrap flex items-baseline gap-[0.3em]">
+            <Shuffle
+              tag="span"
+              text="Course"
+              className="text-ink"
+              textAlign="left"
+              duration={0.32}
+              stagger={0.025}
+              shuffleTimes={2}
+              threshold={0.1}
+              rootMargin="0px"
+            />
+            <Shuffle
+              tag="span"
+              text="Koi?"
+              className="text-accent"
+              textAlign="left"
+              duration={0.32}
+              stagger={0.025}
+              shuffleTimes={2}
+              threshold={0.1}
+              rootMargin="0px"
+            />
+          </span>
+        </div>
+
+        {/* Right cluster — freshness, view switcher, then the external link */}
+        <div className="ml-auto flex items-center gap-2 lg:gap-3 shrink-0">
+          <span
+            className="hidden lg:flex flex-col items-end whitespace-nowrap"
+            title={lastUpdated ? `Last updated: ${lastUpdated}` : 'Waiting for the latest sync'}
+          >
+            <span className="flex items-center gap-1.5 text-micro text-ink-3">
+              <span className="w-1.5 h-1.5 rounded-pill bg-ok shrink-0" />
+              Updated
+            </span>
+            <span className="text-mini font-medium text-ink-2 tabular-nums">
+              {shortUpdatedLabel(lastUpdated)}
+            </span>
+          </span>
+
+          {/* View switcher — same height, radius and border language as the
+              GitHub button beside it, so the right cluster reads as one set. */}
+          <div className="h-9 p-1 border border-rule rounded-control flex items-center relative w-[200px] shrink-0">
+            <div
+              className="absolute top-1 bottom-1 rounded-chip bg-accent shadow-rest transition-all duration-300 ease-spring z-0"
+              style={{
+                left: activeTab === 'list' ? '4px' : '50%',
+                width: 'calc(50% - 4px)',
+              }}
+            />
+            <button
+              onClick={() => setActiveTab('list')}
+              aria-current={activeTab === 'list' ? 'page' : undefined}
+              className={`flex-1 px-3 py-1 rounded-chip text-body font-medium transition-colors duration-150 ease-spring relative z-10 flex items-center justify-center gap-2 cursor-pointer ${activeTab === 'list' ? 'text-accent-ink' : 'text-ink-2 hover:text-ink'}`}
+            >
+              <FaList size={13} /> List
+            </button>
+            <button
+              onClick={() => setActiveTab('schedule')}
+              aria-current={activeTab === 'schedule' ? 'page' : undefined}
+              className={`flex-1 px-3 py-1 rounded-chip text-body font-medium transition-colors duration-150 ease-spring relative z-10 flex items-center justify-center gap-2 cursor-pointer ${activeTab === 'schedule' ? 'text-accent-ink' : 'text-ink-2 hover:text-ink'}`}
+            >
+              <FaCalendarAlt size={13} /> Schedule
+            </button>
+          </div>
+
+          <a
+            href="https://github.com/maharun0/course-koi"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-9 flex items-center gap-2 px-3 rounded-control border border-rule text-body font-medium text-ink-2 hover:text-ink hover:bg-rule-soft transition-colors duration-150 ease-spring shrink-0"
+            title="Star on GitHub"
+          >
+            <FaGithub className="text-lg shrink-0" />
+            <span>Star</span>
+          </a>
+        </div>
+      </header>
+
+      <main className="flex-1 min-h-0 p-2 md:px-4 md:pt-4 lg:px-6 flex flex-col overflow-hidden relative">
+
+        {/* Mobile header (md:hidden) — the desktop/tablet navbar above replaces this */}
+        <div className="md:hidden flex flex-col justify-between mb-4 sm:mb-6 gap-3 sm:gap-4 shrink-0 z-20 relative">
           <div className="flex items-center justify-between w-full md:w-auto gap-2.5 sm:gap-4 animate-fade-in-down">
             <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
               {/* Open-only: the drawer covers this button while open, so closing
@@ -199,17 +326,6 @@ function CourseKoiApp() {
                 <FaCalendarAlt /> Schedule
               </button>
             </div>
-
-            <a
-              href="https://github.com/maharun0/course-koi"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden md:flex items-center px-3 py-1.5 bg-surface hover:bg-rule-soft text-ink rounded-control transition-colors duration-150 ease-spring border border-rule"
-            >
-              <FaGithub className="mr-2 text-xl" />
-              <span className="text-body font-medium">Star on GitHub</span>
-              <FaStar className="ml-2 text-accent" />
-            </a>
           </div>
         </div>
 

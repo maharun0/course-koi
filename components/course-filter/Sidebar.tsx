@@ -145,15 +145,19 @@ export default function Sidebar({
     setView('all');
     setActiveCourse(courseCode);
     onTabChange?.('list');
+    setIsCollapsed(true);
   };
 
   const handleSearchResultClick = (courseCode: string, isSaved: boolean) => {
     if (!isSaved) {
+      // Adding stays open — people usually add several courses in a row.
       addCourse(courseCode);
     } else {
+      // Jumping to an already-added course is navigation, so get out of the way.
       setView('all');
       setActiveCourse(courseCode);
       setSearchTerm('');
+      setIsCollapsed(true);
     }
   };
 
@@ -183,13 +187,16 @@ export default function Sidebar({
       {/* Overlay drawer — fixed position, transform/opacity only, so opening/closing
           never resizes or reflows the main content behind it. */}
       <aside
-        className={`fixed left-2 top-2 bottom-2 z-40 w-[85vw] max-w-64 sm:w-64 flex flex-col transition-[transform,opacity] duration-200 ease-spring will-change-transform ${isCollapsed ? '-translate-x-[calc(100%+1rem)] opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'
+        id="courses-panel"
+        aria-hidden={isCollapsed}
+        className={`fixed left-2 top-2 md:top-16 bottom-2 z-40 w-[85vw] max-w-64 sm:w-64 flex flex-col transition-[transform,opacity] duration-200 ease-spring will-change-transform ${isCollapsed ? '-translate-x-[calc(100%+1rem)] opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'
           }`}
       >
         {/* Panel */}
         <div className="glass rounded-panel p-3 flex-1 flex flex-col overflow-hidden relative gap-3 w-full">
-          {/* Title + close. The drawer covers the header hamburger while open,
-              so closing happens from in here. */}
+          {/* Title + close. On desktop the drawer opens below the navbar so the
+              header trigger stays visible and toggles it shut; on mobile the
+              drawer covers the header, so this × is the only way out. */}
           <div className="flex items-center justify-between gap-2 shrink-0">
             <h2 className="text-lead font-bold text-ink tracking-tight">Courses</h2>
             <button
@@ -290,6 +297,7 @@ export default function Sidebar({
                 setView('all');
                 setActiveCourse(null);
                 onTabChange?.('list');
+                setIsCollapsed(true);
               }}
               className={navItemClass(activeCourse === null && view === 'all')}
               title="All Courses"
@@ -303,6 +311,8 @@ export default function Sidebar({
                 setView('starred');
                 setActiveCourse(null);
                 setSelectedStarredCourses([]);
+                onTabChange?.('list');
+                setIsCollapsed(true);
               }}
               className={navItemClass(view === 'starred')}
               title="Starred Sections"

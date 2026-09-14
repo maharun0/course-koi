@@ -253,8 +253,17 @@
 /* Base                                                                    */
 /* ---------------------------------------------------------------------- */
 
-* {
-  border-color: var(--color-rule);
+/* Default border color. MUST stay inside @layer base: unlayered rules beat
+   layered ones regardless of specificity, and Tailwind v4 emits utilities in
+   a cascade layer — so an unlayered `*` here silently overrides every
+   border-accent / border-transparent / focus:border-* utility in the app. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop {
+    border-color: var(--color-rule);
+  }
 }
 
 body {
