@@ -21,13 +21,13 @@ export default function ConflictWarning({ selectedCourses }: ConflictWarningProp
     if (conflicts.length === 0) return null;
 
     return (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
-            <div className="bg-red-500/90 backdrop-blur text-white px-6 py-4 rounded-lg shadow-xl border border-red-400 flex flex-col gap-2 max-w-md">
-                <div className="flex items-center gap-3 font-bold text-lg">
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in-up">
+            <div className="bg-bad text-accent-ink px-6 py-4 rounded-panel shadow-float flex flex-col gap-2 max-w-md">
+                <div className="flex items-center gap-3 font-bold text-lead">
                     <FaExclamationTriangle />
-                    <span>Schedule Conflict Detected!</span>
+                    <span>Schedule conflict detected</span>
                 </div>
-                <ul className="list-disc pl-8 text-sm space-y-1">
+                <ul className="list-disc pl-8 text-body space-y-1">
                     {conflicts.map((c, i) => (
                         <li key={i}>{c}</li>
                     ))}

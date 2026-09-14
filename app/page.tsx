@@ -101,12 +101,12 @@ function CourseKoiApp() {
   };
 
   return (
-    <div className="flex min-h-screen text-slate-100 font-sans selection:bg-indigo-500/30">
+    <div className="flex min-h-screen text-ink font-sans selection:bg-accent/30">
 
       {/* Absolute Background Effects */}
       <div className="fixed inset-0 z-[-1] pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-600/20 blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-600/20 blur-[120px] animate-pulse delay-1000" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-pill bg-accent-2/10 blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-pill bg-accent/10 blur-[120px]" />
       </div>
 
       <Sidebar
@@ -138,29 +138,28 @@ function CourseKoiApp() {
           <div className="flex items-center gap-4 animate-fade-in-down">
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0 text-white hover:opacity-90 transition-opacity cursor-pointer"
+              className="w-10 h-10 rounded-control bg-accent-gradient flex items-center justify-center shadow-rest shrink-0 text-accent-ink hover:shadow-hover transition-shadow duration-150 ease-spring cursor-pointer"
               title={sidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
             >
               <FaBars size={16} />
             </button>
             <div className="relative group cursor-pointer">
-              <div className="absolute inset-0 bg-indigo-500 rounded-full blur opacity-40 group-hover:opacity-60 transition-opacity"></div>
-              <Image src="/course_koi.png" alt="Course Koi" width={64} height={64} className="rounded-full relative z-10 border-2 border-white/10" />
+              <Image src="/course_koi.png" alt="Course Koi" width={64} height={64} className="rounded-pill relative z-10 border-2 border-rule" />
             </div>
             <div>
-              <h1 className="text-4xl font-extrabold tracking-tight text-white mb-1">
-                Course <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Koi?</span>
+              <h1 className="font-display text-4xl tracking-tight text-ink mb-1">
+                Course <span className="text-gradient">Koi?</span>
               </h1>
-              <p className="text-gray-400 text-sm font-medium">Last Updated: {lastUpdated ?? '...'}</p>
+              <p className="text-ink-2 text-mini font-medium">Last Updated: {lastUpdated ?? '...'}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
             {/* View Toggles */}
-            <div className="glass p-1 rounded-lg flex items-center relative w-[240px]">
+            <div className="glass p-1 rounded-control flex items-center relative w-[240px]">
               {/* Sliding Background */}
               <div
-                className={`absolute top-1 bottom-1 rounded-md bg-indigo-600 shadow-lg transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] z-0`}
+                className="absolute top-1 bottom-1 rounded-chip bg-accent shadow-rest transition-all duration-300 ease-spring z-0"
                 style={{
                   left: activeTab === 'list' ? '4px' : '50%',
                   width: 'calc(50% - 4px)'
@@ -169,13 +168,13 @@ function CourseKoiApp() {
 
               <button
                 onClick={() => setActiveTab('list')}
-                className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative z-10 flex items-center justify-center gap-2 ${activeTab === 'list' ? 'text-white' : 'text-gray-400 hover:text-white'}`}
+                className={`flex-1 px-3 py-1.5 rounded-chip text-body font-medium transition-colors duration-150 ease-spring relative z-10 flex items-center justify-center gap-2 ${activeTab === 'list' ? 'text-accent-ink' : 'text-ink-2 hover:text-ink'}`}
               >
                 <FaList /> List
               </button>
               <button
                 onClick={() => setActiveTab('schedule')}
-                className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors relative z-10 flex items-center justify-center gap-2 ${activeTab === 'schedule' ? 'text-white' : 'text-gray-400 hover:text-white'}`}
+                className={`flex-1 px-3 py-1.5 rounded-chip text-body font-medium transition-colors duration-150 ease-spring relative z-10 flex items-center justify-center gap-2 ${activeTab === 'schedule' ? 'text-accent-ink' : 'text-ink-2 hover:text-ink'}`}
               >
                 <FaCalendarAlt /> Schedule
               </button>
@@ -185,11 +184,11 @@ function CourseKoiApp() {
               href="https://github.com/maharun0/course-koi"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden md:flex items-center px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-all border border-white/10 hover:border-white/20"
+              className="hidden md:flex items-center px-3 py-1.5 bg-surface hover:bg-rule-soft text-ink rounded-control transition-colors duration-150 ease-spring border border-rule"
             >
               <FaGithub className="mr-2 text-xl" />
-              <span className="text-sm font-medium">Star on GitHub</span>
-              <FaStar className="ml-2 text-yellow-400" />
+              <span className="text-body font-medium">Star on GitHub</span>
+              <FaStar className="ml-2 text-accent" />
             </a>
           </div>
         </div>
@@ -198,10 +197,11 @@ function CourseKoiApp() {
         <div className="relative flex-1 w-full isolate">
           {/* List View */}
           <div
-            className={`absolute inset-0 w-full h-full overflow-y-auto custom-scrollbar transition-all duration-300 ease-in-out ${activeTab === 'list'
-              ? 'opacity-100 translate-x-0 z-10'
-              : 'opacity-0 -translate-x-4 z-0 pointer-events-none'
+            className={`absolute inset-0 w-full h-full overflow-y-auto custom-scrollbar transition-opacity duration-150 ease-spring ${activeTab === 'list'
+              ? 'opacity-100 z-10'
+              : 'opacity-0 z-0 pointer-events-none'
               }`}
+            style={{ contentVisibility: activeTab === 'list' ? 'visible' : 'hidden' }}
           >
             <div className="pb-4"> {/* Padding bottom for scroll content */}
               <FilterMenu
@@ -233,13 +233,14 @@ function CourseKoiApp() {
 
           {/* Schedule View */}
           <div
-            className={`absolute inset-0 w-full h-full overflow-hidden transition-all duration-300 ease-in-out ${activeTab === 'schedule'
-              ? 'opacity-100 translate-x-0 z-10'
-              : 'opacity-0 translate-x-4 z-0 pointer-events-none'
+            className={`absolute inset-0 w-full h-full overflow-hidden transition-opacity duration-150 ease-spring ${activeTab === 'schedule'
+              ? 'opacity-100 z-10'
+              : 'opacity-0 z-0 pointer-events-none'
               }`}
+            style={{ contentVisibility: activeTab === 'schedule' ? 'visible' : 'hidden' }}
           >
             <div className="w-full h-full">
-              <p className="text-gray-400 mb-4 px-2 hidden">Select from your <strong>Starred</strong> courses to build your weekly schedule.</p>
+              <p className="text-ink-2 mb-4 px-2 hidden">Select from your <strong>Starred</strong> courses to build your weekly schedule.</p>
               <ScheduleView courses={starredCourses} allCourses={sortedData} savedCourses={savedCourses} />
             </div>
           </div>
@@ -262,7 +263,7 @@ function CourseKoiApp() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-canvas text-ink flex items-center justify-center">Loading...</div>}>
       <CourseKoiApp />
     </Suspense>
   )
