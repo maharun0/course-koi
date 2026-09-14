@@ -10,6 +10,8 @@ interface ScheduleViewProps {
     courses: CourseRow[]; // This represents starred courses
     allCourses: CourseRow[]; // New prop for all courses
     savedCourses: CourseRow[]; // "My Courses" added via the sidebar
+    starredCourses: CourseRow[];
+    toggleStar: (course: CourseRow) => void;
 }
 
 type CourseListMode = 'starred' | 'all' | 'mine';
@@ -42,7 +44,7 @@ const TOTAL_MINS = END_OF_DAY - START_OF_DAY;
 // "Custom" blocks below.
 const CATEGORY_COLORS = ['bg-cat-1', 'bg-cat-2', 'bg-cat-3', 'bg-cat-4'];
 
-export default function ScheduleView({ courses, allCourses, savedCourses }: ScheduleViewProps) {
+export default function ScheduleView({ courses, allCourses, savedCourses, starredCourses, toggleStar }: ScheduleViewProps) {
     const [selectedCourses, setSelectedCourses] = useState<CourseRow[]>([]);
     const [sidebarTab, setSidebarTab] = useState<'courses' | 'custom'>('courses');
     const [searchTerm, setSearchTerm] = useState('');
@@ -1057,6 +1059,7 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                             {/* Render Filtered All Courses */}
                             {displayedCourses.map(course => {
                                 const isSelected = selectedCourses.some(c => c.id === course.id);
+                                const isStarred = starredCourses.some(c => c.id === course.id);
                                 return (
                                     <button
                                         key={course.id}
@@ -1072,9 +1075,21 @@ export default function ScheduleView({ courses, allCourses, savedCourses }: Sche
                                             <span className={`font-semibold tracking-tight text-body truncate ${isSelected ? 'text-accent' : 'text-ink-2'}`}>
                                                 {course.courseCode}
                                             </span>
-                                            <span className={`shrink-0 w-5 h-5 flex items-center justify-center rounded-pill text-micro font-medium tabular font-mono ${isSelected ? 'bg-accent/20 text-accent' : 'bg-rule text-ink-3'}`}>
-                                                {course.section}
-                                            </span>
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                <div
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleStar(course);
+                                                    }}
+                                                    title={isStarred ? 'Unstar section' : 'Star section'}
+                                                    className={`p-0.5 rounded-pill transition-colors duration-150 ease-spring cursor-pointer ${isStarred ? 'text-gold' : 'text-ink-3 hover:text-gold'}`}
+                                                >
+                                                    <FaStar size={15} />
+                                                </div>
+                                                <span className={`w-5 h-5 flex items-center justify-center rounded-pill text-micro font-medium tabular font-mono ${isSelected ? 'bg-accent/20 text-accent' : 'bg-rule text-ink-3'}`}>
+                                                    {course.section}
+                                                </span>
+                                            </div>
                                         </div>
                                         <div className="text-mini text-ink-3 truncate mt-0.5">
                                             {course.time}

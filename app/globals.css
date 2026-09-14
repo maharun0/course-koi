@@ -21,6 +21,11 @@
   --color-accent-2: #a78bfa;
   --color-accent-ink: #ffffff;
 
+  /* Fixed (non-theme-flipping) gold for the starred-favorite affordance —
+     same precedent as accent-ink/scrim: a conventional color that should
+     read the same regardless of theme. */
+  --color-gold: #eab308;
+
   /* Status */
   --color-ok: #1f9d6c;
   --color-warn: #b3760f;
