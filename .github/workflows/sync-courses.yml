@@ -14,19 +14,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v10
 
       - name: Install dependencies
         run: uv sync
 
+      # Exit 75 (EX_TEMPFAIL) means the source was unreachable - currently a
+      # Cloudflare challenge - which is not something a re-run or a code change
+      # fixes. That is reported as a warning so a genuine parse/code bug (any
+      # other non-zero exit) still shows up as a red run rather than being
+      # lost among daily false alarms.
       - name: Fetch and parse latest course data
-        run: uv run python data/sync_courses.py
+        id: fetch
+        run: |
+          set +e
+          uv run python data/sync_courses.py
+          code=$?
+          set -e
+          if [ "$code" -eq 75 ]; then
+            echo "source_unavailable=true" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Course sync skipped::Source page is unreachable (Cloudflare challenge). Keeping the last good data."
+            exit 0
+          fi
+          exit "$code"
 
       - name: Check for changes
         id: diff
+        if: steps.fetch.outputs.source_unavailable != 'true'
         run: |
           if git diff --quiet -- public/courses.csv; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
